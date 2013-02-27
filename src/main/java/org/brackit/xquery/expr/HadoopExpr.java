@@ -25,16 +25,19 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.hadoop;
+package org.brackit.xquery.expr;
 
 import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.hadoop.conf.Configuration;
+import org.brackit.hadoop.job.XQueryJob;
+import org.brackit.hadoop.job.XQueryJobConf;
 import org.brackit.xquery.ErrorCode;
 import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.Tuple;
+import org.brackit.xquery.atomic.Bool;
 import org.brackit.xquery.compiler.AST;
 import org.brackit.xquery.compiler.XQ;
 import org.brackit.xquery.compiler.XQExt;
@@ -66,21 +69,24 @@ public final class HadoopExpr implements Expr {
 	{
 		try {
 			ShuffleTree sTree = ShuffleTree.build(ast, null);
-			while (sTree.shuffle != null) {
-				trimJob(sTree, null, ctx, tuple);
+			if (sTree != null) {
+				trimJob(sTree, null, 0, ctx, tuple);
 			}
-			return null;
+			else {
+				run(ast, ctx, tuple);
+			}
+			return new Bool(true);
 		}
 		catch (IOException e) {
 			throw new QueryException(e, ErrorCode.BIT_DYN_ABORTED_ERROR);
 		}
 	}
 	
-	private void trimJob(ShuffleTree s, ShuffleTree parent, QueryContext ctx, Tuple tuple)
+	private void trimJob(ShuffleTree s, ShuffleTree parent, int seq, QueryContext ctx, Tuple tuple)
 			throws IOException, QueryException
 	{
 		while (s.children.size() > 0) {
-			trimJob(s.children.get(0), s, ctx, tuple);
+			trimJob(s.children.get(0), s, seq++, ctx, tuple);
 		}
 		AST root = s.shuffle;
 		while (root.getParent().getType() != XQExt.Shuffle || root.getType() != XQ.End) {
@@ -92,18 +98,18 @@ public final class HadoopExpr implements Expr {
 		}
 		else {
 			s.shuffle = null;
-		}
+		}		
 		
+		run (root, ctx, tuple);
+	}
+	
+	private int run(AST root, QueryContext ctx, Tuple tuple) throws IOException, QueryException
+	{
 		XQueryJobConf jobConf = new XQueryJobConf(conf);
 		jobConf.setAst(root);
 		jobConf.setStaticContext(sctx);
 		if (tuple != null) jobConf.setTuple(tuple);
 		
-		run(jobConf);
-	}
-	
-	private int run(XQueryJobConf jobConf) throws IOException, QueryException
-	{
 		XQueryJob job = new XQueryJob(jobConf);
 		
 		boolean status;
@@ -144,18 +150,22 @@ public final class HadoopExpr implements Expr {
 			this.shuffle = shuffle;
 		}
 		
-		static ShuffleTree build(AST node, ShuffleTree current) {
+		static ShuffleTree build(AST node, ShuffleTree current)
+		{
+			if (node == null) {
+				return current;
+			}
 			if (node.getType() == XQExt.Shuffle) {
 				ShuffleTree s = new ShuffleTree(node, current);
 				if (current != null) {
 					current.children.add(s);
 				}
-				current = s;
+				for (int i = 0; i < node.getChildCount(); i++) {
+					build(node.getChild(i), s);
+				}
+				return s;
 			}
-			for (int i = 0; i < node.getChildCount(); i++) {
-				build(node.getChild(i), current);
-			}
-			return current;
+			return build(node.getLastChild(), current);
 		}
 	}
 

@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.hadoop;
+package org.brackit.hadoop.job;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -37,6 +37,7 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.brackit.xquery.Tuple;
 import org.brackit.xquery.compiler.AST;
+import org.brackit.xquery.compiler.Targets;
 import org.brackit.xquery.module.StaticContext;
 
 public class XQueryJobConf {
@@ -56,6 +57,10 @@ public class XQueryJobConf {
 	public static final String PROP_AST = "org.brackit.hadoop.jobAst";
 	public static final String PROP_SCTX = "org.brackit.hadoop.staticContext";
 	public static final String PROP_TUPLE = "org.brackit.hadoop.contextTuple";
+	public static final String PROP_TARGETS = "org.brackit.hadoop.targets";
+	public static final String PROP_SEQ_NUMBER = "org.brackit.hadoop.seqNumber";
+	public static final String PROP_NUM_REDUCERS = "org.brackit.hadoop.numReducers";
+	public static final String PROP_OUTPUT_DIR = "org.brackit.hadoop.outputDir";
 	
 	public void setAst(AST ast)
 	{
@@ -94,6 +99,27 @@ public class XQueryJobConf {
 		return null; // TODO use tuple deserialization
 	}
 	
+	public void setTargets(Targets targets)
+	{
+		conf.set(PROP_TARGETS, objectToBase64(targets));
+	}
+	
+	public Targets getTargets()
+	{
+		return (Targets) base64ToObject(conf.get(PROP_TARGETS));
+	}
+	
+	public void setSeqNumber(int seq)
+	{
+		conf.set(PROP_SEQ_NUMBER, Integer.toString(seq));
+	}
+	
+	public int getSeqNumber()
+	{
+		Integer seq = Integer.valueOf(conf.get(PROP_SEQ_NUMBER));
+		return seq != null ? seq : 0;
+	}
+	
 	public static String objectToBase64(Serializable obj)
 	{		
 		byte[] data;
@@ -113,6 +139,9 @@ public class XQueryJobConf {
 	
 	public static Object base64ToObject(String b64)
 	{
+		if (b64 == null) {
+			return null;
+		}
 		byte[] data = Base64.decodeBase64(b64.getBytes());
 		try {
 			ByteArrayInputStream bis = new ByteArrayInputStream(data);

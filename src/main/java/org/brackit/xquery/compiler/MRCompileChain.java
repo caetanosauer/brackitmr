@@ -29,12 +29,18 @@ package org.brackit.xquery.compiler;
 
 import java.util.Map;
 
+import org.brackit.xquery.QueryException;
+import org.brackit.xquery.XQuery;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.atomic.Str;
+import org.brackit.xquery.compiler.analyzer.Analyzer;
+import org.brackit.xquery.compiler.analyzer.PrologAnalyzer;
 import org.brackit.xquery.compiler.optimizer.MROptimizer;
 import org.brackit.xquery.compiler.optimizer.Optimizer;
 import org.brackit.xquery.compiler.translator.MRTranslator;
 import org.brackit.xquery.compiler.translator.Translator;
+import org.brackit.xquery.util.dot.DotUtil;
+import org.brackit.xquery.xdm.Expr;
 
 
 public class MRCompileChain extends CompileChain {
@@ -50,5 +56,43 @@ public class MRCompileChain extends CompileChain {
 	{
 		return new MRTranslator(options);
 	}
+
+	@Override
+	public Expr compile(String query) throws QueryException {
+		if (XQuery.DEBUG) {
+			System.out.println(String.format("Compiling:\n%s", query));
+		}
+		
+		// PARSE
+		ModuleResolver resolver = getModuleResolver();
+		AST parsed = parse(query);
+		if (XQuery.DEBUG) {
+			DotUtil.drawDotToFile(parsed.dot(), XQuery.DEBUG_DIR, "parsed");
+		}
+		
+		// ANALYZE
+		PrologAnalyzer.collectionFactory = new HadoopCollectionFactory();
+		Analyzer analyzer = new Analyzer(resolver, baseURI);
+		Targets targets = analyzer.analyze(parsed);		
+		Map<QNm, Str> options = targets.getStaticContext().getOptions();
+
+		// OPTIMIZE
+		targets.optimize(getOptimizer(options));
+		if (XQuery.DEBUG) {
+			DotUtil.drawDotToFile(parsed.dot(), XQuery.DEBUG_DIR, "xquery");
+		}
+		
+		// TRANSLATE
+		Expr result = targets.translate(getTranslator(options));
+		
+		// everything went fine - add compiled module to library
+		if (analyzer.getTargetNS() != null) {
+			resolver.register(analyzer.getTargetNS(), targets.getStaticContext());
+		}
+		
+		return result;
+	}
+	
+	
 
 }
