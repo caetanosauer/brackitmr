@@ -41,7 +41,6 @@ import org.brackit.xquery.atomic.Bool;
 import org.brackit.xquery.compiler.AST;
 import org.brackit.xquery.compiler.XQ;
 import org.brackit.xquery.compiler.XQExt;
-import org.brackit.xquery.module.StaticContext;
 import org.brackit.xquery.util.ExprUtil;
 import org.brackit.xquery.xdm.Expr;
 import org.brackit.xquery.xdm.Item;
@@ -50,19 +49,12 @@ import org.brackit.xquery.xdm.Sequence;
 public final class HadoopExpr implements Expr {
 
 	private final Configuration conf;
-	private final StaticContext sctx;
 	private final AST ast;
 	
-	public HadoopExpr(AST ast, StaticContext sctx, Configuration conf)
+	public HadoopExpr(AST ast, Configuration conf)
 	{
 		this.conf = conf;
-		this.sctx = sctx;
 		this.ast = ast;
-	}
-	
-	public HadoopExpr(AST ast, StaticContext sctx)
-	{
-		this(ast, sctx, new Configuration());
 	}
 	
 	public Sequence evaluate(QueryContext ctx, Tuple tuple) throws QueryException
@@ -107,7 +99,6 @@ public final class HadoopExpr implements Expr {
 	{
 		XQueryJobConf jobConf = new XQueryJobConf(conf);
 		jobConf.setAst(root);
-		jobConf.setStaticContext(sctx);
 		if (tuple != null) jobConf.setTuple(tuple);
 		
 		XQueryJob job = new XQueryJob(jobConf);

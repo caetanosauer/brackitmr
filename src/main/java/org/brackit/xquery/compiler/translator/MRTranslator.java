@@ -27,16 +27,98 @@
  */
 package org.brackit.xquery.compiler.translator;
 
+import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.conf.Configuration;
+import org.brackit.xquery.ErrorCode;
+import org.brackit.xquery.QueryException;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.atomic.Str;
+import org.brackit.xquery.compiler.AST;
+import org.brackit.xquery.compiler.XQ;
+import org.brackit.xquery.compiler.XQExt;
+import org.brackit.xquery.expr.HadoopExpr;
+import org.brackit.xquery.expr.PhaseOutExpr;
+import org.brackit.xquery.expr.PipeExpr;
+import org.brackit.xquery.operator.Operator;
+import org.brackit.xquery.operator.PhaseIn;
+import org.brackit.xquery.xdm.Expr;
+import org.brackit.xquery.xdm.type.SequenceType;
 
 public class MRTranslator extends BottomUpTranslator {
 
-	public MRTranslator(Map<QNm, Str> options)
+	private final Configuration conf;
+	
+	public MRTranslator(Configuration configuration, Map<QNm, Str> options)
 	{
 		super(options);
+		this.conf = configuration;
+	}
+
+	@Override
+	protected Expr anyExpr(AST node) throws QueryException
+	{
+		if (node.getType() == XQExt.PhaseOut) {
+			return phaseOut(node);
+		}
+		if (node.getType() == XQ.End) {
+			return new PipeExpr(anyOp(node.getLastChild()), anyExpr(node.getChild(1)));
+		}
+		return super.anyExpr(node);
+	}
+
+	@Override
+	protected Expr pipeExpr(AST node) throws QueryException
+	{
+		return new HadoopExpr(node, conf);
+	}
+
+	@Override
+	protected Operator anyOp(AST node) throws QueryException
+	{
+		if (node.getType() == XQExt.PhaseIn) {
+			return phaseIn(node);
+		}
+		else if (node.getType() == XQExt.TagSplitter) {
+			
+		}
+		return super.anyOp(node);
+	}
+	
+	protected Expr phaseOut(AST node) throws QueryException
+	{
+		int[] indexes = new int[node.getChildCount() - 1];
+		for (int i = 0; i < indexes.length; i++) {
+			AST child = node.getChild(i);
+			if (child.getType() != XQ.VariableRef) {
+				throw new QueryException(ErrorCode.BIT_DYN_RT_ILLEGAL_ARGUMENTS_ERROR,
+						"PhaseOut requires variable references as parameters");
+			}
+			Integer pos = (Integer) node.getProperty("pos");
+			if (pos == null) {
+				throw new QueryException(ErrorCode.BIT_DYN_RT_ILLEGAL_ARGUMENTS_ERROR,
+						"Variable references have not been resolved");
+			}
+			indexes[i] = pos;
+		}
+		return new PhaseOutExpr(anyOp(node.getLastChild()), indexes, node.checkProperty("isJoin"));
+	}
+	
+	protected Operator phaseIn(AST node) throws QueryException
+	{
+		@SuppressWarnings("unchecked")
+		List<SequenceType> types = (List<SequenceType>) node.getProperty("types");
+		if (types == null) {
+			throw new QueryException(ErrorCode.BIT_DYN_RT_ILLEGAL_ARGUMENTS_ERROR, 
+					"MR translation requires type-annotated query plans"); 
+		}
+		return new PhaseIn(types.size(), node.checkProperty("isJoin"));
+	}
+	
+	protected Operator tagSplitter(AST node) throws QueryException
+	{
+		return null;
 	}
 
 }

@@ -29,6 +29,8 @@ package org.brackit.xquery.compiler;
 
 import java.util.Map;
 
+import org.apache.hadoop.conf.Configuration;
+import org.brackit.hadoop.job.XQueryJobConf;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.XQuery;
 import org.brackit.xquery.atomic.QNm;
@@ -38,7 +40,7 @@ import org.brackit.xquery.compiler.analyzer.PrologAnalyzer;
 import org.brackit.xquery.compiler.optimizer.MROptimizer;
 import org.brackit.xquery.compiler.optimizer.Optimizer;
 import org.brackit.xquery.compiler.translator.MRTranslator;
-import org.brackit.xquery.compiler.translator.Translator;
+import org.brackit.xquery.module.StaticContext;
 import org.brackit.xquery.util.dot.DotUtil;
 import org.brackit.xquery.xdm.Expr;
 
@@ -49,12 +51,6 @@ public class MRCompileChain extends CompileChain {
 	protected Optimizer getOptimizer(Map<QNm, Str> options)
 	{
 		return new MROptimizer(options);
-	}
-
-	@Override
-	protected Translator getTranslator(Map<QNm, Str> options)
-	{
-		return new MRTranslator(options);
 	}
 
 	@Override
@@ -82,15 +78,18 @@ public class MRCompileChain extends CompileChain {
 			DotUtil.drawDotToFile(parsed.dot(), XQuery.DEBUG_DIR, "xquery");
 		}
 		
-		// TRANSLATE
-		Expr result = targets.translate(getTranslator(options));
+		StaticContext sctx = targets.getStaticContext();
+		Target body = targets.removeBodyTarget();
+		XQueryJobConf conf = new XQueryJobConf(new Configuration());
+		conf.setTargets(targets);
 		
-		// everything went fine - add compiled module to library
+		// add compiled module to library
 		if (analyzer.getTargetNS() != null) {
-			resolver.register(analyzer.getTargetNS(), targets.getStaticContext());
+			resolver.register(analyzer.getTargetNS(), sctx);
 		}
 		
-		return result;
+		MRTranslator translator = new MRTranslator(conf.getConfiguration(), options);
+		return translator.expression(sctx, body.getAst(), false);
 	}
 	
 	
