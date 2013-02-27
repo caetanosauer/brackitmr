@@ -29,12 +29,61 @@ package org.brackit.hadoop.job;
 
 import java.io.IOException;
 
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.FileInputFormat;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.brackit.hadoop.io.CollectionInputFormat;
+import org.brackit.hadoop.runtime.XQTask;
+import org.brackit.xquery.compiler.AST;
+import org.brackit.xquery.compiler.XQ;
+import org.brackit.xquery.compiler.XQExt;
+import org.brackit.xquery.util.Cfg;
 
 public class XQueryJob extends Job {
-
-	public XQueryJob(XQueryJobConf conf) throws IOException {
+	
+	private boolean isLeaf = false;
+	private boolean isRoot = false;
+	
+	private static int NUM_REDUCERS = Cfg.asInt(XQueryJobConf.PROP_NUM_REDUCERS, 10);
+	
+	public XQueryJob(XQueryJobConf conf) throws IOException
+	{
 		super(conf.getConfiguration());
+		
+		walkAst(conf.getAst());
+		setMapperClass(isLeaf && isRoot ? Mapper.class : XQTask.XQMapper.class);
+		setReducerClass(XQTask.XQReducer.class);
+		setNumReduceTasks(isLeaf && isRoot ? 0 : NUM_REDUCERS);
+		setInputFormatClass(isLeaf ? CollectionInputFormat.class : SequenceFileInputFormat.class);
+		setOutputFormatClass(isRoot ? TextOutputFormat.class : SequenceFileOutputFormat.class);
+		
+		conf.parseInputs();
+		for (String path : conf.getInputPaths()) {
+			FileInputFormat.addInputPath((JobConf) conf.getConfiguration(), new Path(path));
+		}
+	}
+	
+	private void walkAst(AST node)
+	{
+		if (!isRoot && node.getType() == XQ.End) {
+			isRoot = true;
+		}
+		else if (!isLeaf && node.getType() == XQ.Start) {
+			isLeaf = true;
+		}
+		if (node.getType() == XQExt.Shuffle) {
+			for (int i = 0; i < node.getChildCount(); i++) {
+				walkAst(node.getChild(i));
+			}
+		}
+		else {
+			walkAst(node.getLastChild());
+		}
 	}
 	
 }

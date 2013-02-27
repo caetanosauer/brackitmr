@@ -9,12 +9,14 @@ public class CollectionInputSplit extends InputSplit {
 
 	private final InputSplit inputSplit;
 	private final Class<? extends InputFormat<?, ?>> inputFormatClass;
+	private final int astBranch;
 	
-	
-	public CollectionInputSplit(InputSplit inputSplit, Class<? extends InputFormat<?, ?>> inputFormatClass)
+	public CollectionInputSplit(InputSplit inputSplit, Class<? extends InputFormat<?,?>> class1,
+			int astBranch)
 	{
 		this.inputSplit = inputSplit;
-		this.inputFormatClass = inputFormatClass;
+		this.inputFormatClass = class1;
+		this.astBranch = astBranch;
 	}
 
 	@Override
@@ -33,7 +35,10 @@ public class CollectionInputSplit extends InputSplit {
 	{
 		return inputFormatClass;
 	}
-	
-	
+
+	public int getAstBranch()
+	{
+		return astBranch;
+	}		
 
 }

@@ -29,21 +29,31 @@ package org.brackit.hadoop.job;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.InputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.brackit.hadoop.io.HadoopCSVCollection;
 import org.brackit.xquery.Tuple;
 import org.brackit.xquery.compiler.AST;
 import org.brackit.xquery.compiler.Targets;
+import org.brackit.xquery.compiler.XQ;
+import org.brackit.xquery.compiler.XQExt;
 import org.brackit.xquery.module.StaticContext;
+import org.brackit.xquery.xdm.Collection;
 
 public class XQueryJobConf {
 
 	private Configuration conf;
 	private transient AST ast;
+	private transient StaticContext sctx;
 	
 	public XQueryJobConf(Configuration conf) {
 		this.conf = conf;
@@ -61,6 +71,8 @@ public class XQueryJobConf {
 	public static final String PROP_SEQ_NUMBER = "org.brackit.hadoop.seqNumber";
 	public static final String PROP_NUM_REDUCERS = "org.brackit.hadoop.numReducers";
 	public static final String PROP_OUTPUT_DIR = "org.brackit.hadoop.outputDir";
+	public static final String PROP_INPUT_FORMATS = "org.brackit.hadoop.inputFormats";
+	public static final String PROP_INPUT_PATHS = "org.brackit.hadoop.inputPaths";
 	
 	public void setAst(AST ast)
 	{
@@ -70,20 +82,24 @@ public class XQueryJobConf {
 	
 	public AST getAst()
 	{
-		if (ast != null) {
-			return ast;
+		if (ast == null) {
+			ast = (AST) base64ToObject(conf.get(PROP_AST));
 		}
-		return (AST) base64ToObject(conf.get(PROP_AST));
+		return ast;
 	}
 	
 	public void setStaticContext(StaticContext sctx)
 	{
+		this.sctx = sctx;
 		conf.set(PROP_SCTX, objectToBase64(sctx));
 	}
 	
 	public StaticContext getStaticContext()
 	{
-		return (StaticContext) base64ToObject(conf.get(PROP_SCTX));
+		if (sctx == null) {
+			sctx = (StaticContext) base64ToObject(conf.get(PROP_SCTX));
+		}
+		return sctx;
 	}
 
 	public void setTuple(Tuple tuple) {
@@ -118,6 +134,96 @@ public class XQueryJobConf {
 	{
 		Integer seq = Integer.valueOf(conf.get(PROP_SEQ_NUMBER));
 		return seq != null ? seq : 0;
+	}
+	
+	public void parseInputs() throws IOException
+	{
+		AST node = getAst();
+		while (node != null && node.getType() != XQExt.Shuffle && node.getType() != XQ.Start) {
+			node = node.getLastChild();
+		}
+		
+		if (node == null) {
+			return;
+		}
+		
+		if (node.getType() == XQExt.Shuffle) {
+			for (int i = 0; i < node.getChildCount(); i++) {
+				AST start = node.getChild(i);
+				while (start.getType() != XQ.Start) {
+					start = start.getLastChild();
+				}
+				parseForBind(start.getParent());
+			}
+		}
+		else {
+			parseForBind(node.getParent());
+		}
+	}
+	
+	private void parseForBind(AST forBind) throws IOException
+	{
+		StaticContext sctx = getStaticContext();
+		if (forBind.getType() != XQ.ForBind) {
+			throw new IOException("MapReduce queries must begin with a ForBind operator");
+		}
+		// TODO: here we assume for bind is always to collection
+		String collName = forBind.getChild(1).getChild(0).getStringValue();
+		Collection<?> coll = sctx.getCollections().resolve(collName);
+		if (coll == null) {
+			throw new IOException("Could not find declared collection " + collName);
+		}
+		
+		if (coll instanceof HadoopCSVCollection) {
+			addInputFormat(TextInputFormat.class.getName());
+			addInputPath(((HadoopCSVCollection) coll).getLocation());
+		}
+		else {
+			throw new IOException("Collection of type " + coll.getClass().getSimpleName() +
+					" is not supported");
+		}
+	}
+	
+	private void addInputFormat(String className)
+	{
+		String formats = conf.get(PROP_INPUT_FORMATS);
+		if (formats == null) {
+			formats = "";
+		}
+		conf.set(PROP_INPUT_FORMATS, formats + "," + className);
+	}
+	
+	private void addInputPath(String path)
+	{
+		String paths = conf.get(PROP_INPUT_PATHS);
+		if (paths == null) {
+			paths = "";
+		}
+		conf.set(PROP_INPUT_FORMATS, paths + "," + path);
+	}
+	
+	@SuppressWarnings("unchecked")
+	public List<Class<? extends InputFormat<?, ?>>> getInputFormats() throws IOException
+	{
+		try {
+			String formatStr = conf.get(PROP_INPUT_FORMATS);
+			String[] classes = formatStr.split(",");
+			List<Class<? extends InputFormat<?, ?>>> result =
+					new ArrayList<Class<? extends InputFormat<?,?>>>();
+			for (String className : classes) {
+				result.add((Class<? extends InputFormat<?, ?>>) Class.forName(className));
+			}
+			return result;
+		}
+		catch (Exception e) {
+			throw new IOException(e);
+		}
+	}
+	
+	public String[] getInputPaths()
+	{
+		String paths = conf.get(PROP_INPUT_PATHS);
+		return paths == null ? null : paths.split(",");
 	}
 	
 	public static String objectToBase64(Serializable obj)

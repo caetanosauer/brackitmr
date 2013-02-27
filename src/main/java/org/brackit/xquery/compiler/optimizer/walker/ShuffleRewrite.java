@@ -111,6 +111,7 @@ public class ShuffleRewrite extends Walker {
 		AST next = node.getLastChild();
 		AST parent = node.getParent();
 	
+		// TODO key specs should be under phaseOut
 		// TODO add rule to extract order by key into variable
 		for (int i = 0; i < node.getChildCount() - 1; i++) {
 			AST shuffleSpec = new AST(XQExt.ShuffleSpec);
