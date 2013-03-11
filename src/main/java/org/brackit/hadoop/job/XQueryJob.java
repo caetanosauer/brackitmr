@@ -29,9 +29,6 @@ package org.brackit.hadoop.job;
 
 import java.io.IOException;
 
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapred.FileInputFormat;
-import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
@@ -53,7 +50,7 @@ public class XQueryJob extends Job {
 	
 	public XQueryJob(XQueryJobConf conf) throws IOException
 	{
-		super(conf.getConfiguration());
+		super(conf);
 		
 		walkAst(conf.getAst());
 		setMapperClass(isLeaf && isRoot ? Mapper.class : XQTask.XQMapper.class);
@@ -61,15 +58,13 @@ public class XQueryJob extends Job {
 		setNumReduceTasks(isLeaf && isRoot ? 0 : NUM_REDUCERS);
 		setInputFormatClass(isLeaf ? CollectionInputFormat.class : SequenceFileInputFormat.class);
 		setOutputFormatClass(isRoot ? TextOutputFormat.class : SequenceFileOutputFormat.class);
-		
-		conf.parseInputs();
-		for (String path : conf.getInputPaths()) {
-			FileInputFormat.addInputPath((JobConf) conf.getConfiguration(), new Path(path));
-		}
 	}
 	
 	private void walkAst(AST node)
 	{
+		if (node == null) {
+			return;
+		}
 		if (!isRoot && node.getType() == XQ.End) {
 			isRoot = true;
 		}

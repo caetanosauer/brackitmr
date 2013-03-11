@@ -47,6 +47,11 @@ import org.brackit.xquery.xdm.Expr;
 
 public class MRCompileChain extends CompileChain {
 
+	public MRCompileChain()
+	{
+		CompileChain.BOTTOM_UP_PLAN = true;
+	}
+	
 	@Override
 	protected Optimizer getOptimizer(Map<QNm, Str> options)
 	{
@@ -88,7 +93,7 @@ public class MRCompileChain extends CompileChain {
 			resolver.register(analyzer.getTargetNS(), sctx);
 		}
 		
-		MRTranslator translator = new MRTranslator(conf.getConfiguration(), options);
+		MRTranslator translator = new MRTranslator(conf, options);
 		return translator.expression(sctx, body.getAst(), false);
 	}
 	

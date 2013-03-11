@@ -71,7 +71,7 @@ public class MRTranslator extends BottomUpTranslator {
 	@Override
 	protected Expr pipeExpr(AST node) throws QueryException
 	{
-		return new HadoopExpr(node, conf);
+		return new HadoopExpr(sctx, node, conf);
 	}
 
 	@Override
@@ -81,7 +81,7 @@ public class MRTranslator extends BottomUpTranslator {
 			return phaseIn(node);
 		}
 		else if (node.getType() == XQExt.TagSplitter) {
-			
+			return tagSplitter(node);
 		}
 		return super.anyOp(node);
 	}

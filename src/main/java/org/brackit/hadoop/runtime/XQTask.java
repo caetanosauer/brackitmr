@@ -26,7 +26,7 @@ public class XQTask {
 				HadoopQueryContext hctx = new HadoopQueryContext(context);
 				XQueryJobConf conf = new XQueryJobConf(context.getConfiguration());
 				Targets targets = conf.getTargets();
-				MRTranslator translator = new MRTranslator(conf.getConfiguration(), null);
+				MRTranslator translator = new MRTranslator(conf, null);
 				if (targets != null) {
 					for (Target t : targets) {
 						t.translate(translator);
@@ -41,6 +41,7 @@ public class XQTask {
 				if (node.getType() == XQExt.Shuffle) {
 					int branch = ((CollectionInputSplit) context.getInputSplit()).getAstBranch();
 					node = node.getChild(branch);
+					
 				}
 				else {
 					node = ast;
@@ -65,7 +66,7 @@ public class XQTask {
 				HadoopQueryContext hctx = new HadoopQueryContext(context);
 				XQueryJobConf conf = new XQueryJobConf(context.getConfiguration());
 				Targets targets = conf.getTargets();
-				MRTranslator translator = new MRTranslator(conf.getConfiguration(), null);
+				MRTranslator translator = new MRTranslator(conf, null);
 				if (targets != null) {
 					for (Target t : targets) {
 						t.translate(translator);

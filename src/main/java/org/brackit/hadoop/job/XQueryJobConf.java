@@ -38,6 +38,10 @@ import java.util.List;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.FileInputFormat;
+import org.apache.hadoop.mapred.FileOutputFormat;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.brackit.hadoop.io.HadoopCSVCollection;
@@ -47,21 +51,22 @@ import org.brackit.xquery.compiler.Targets;
 import org.brackit.xquery.compiler.XQ;
 import org.brackit.xquery.compiler.XQExt;
 import org.brackit.xquery.module.StaticContext;
+import org.brackit.xquery.util.Cfg;
 import org.brackit.xquery.xdm.Collection;
 
-public class XQueryJobConf {
+public class XQueryJobConf extends JobConf {
 
-	private Configuration conf;
 	private transient AST ast;
 	private transient StaticContext sctx;
 	
-	public XQueryJobConf(Configuration conf) {
-		this.conf = conf;
+	public XQueryJobConf(Configuration conf)
+	{
+		super(conf);
 	}
 	
-	public Configuration getConfiguration()
+	public XQueryJobConf()
 	{
-		return conf;
+		super();
 	}
 	
 	public static final String PROP_AST = "org.brackit.hadoop.jobAst";
@@ -74,16 +79,18 @@ public class XQueryJobConf {
 	public static final String PROP_INPUT_FORMATS = "org.brackit.hadoop.inputFormats";
 	public static final String PROP_INPUT_PATHS = "org.brackit.hadoop.inputPaths";
 	
+	private static String OUTPUT_DIR = Cfg.asString(XQueryJobConf.PROP_OUTPUT_DIR, "./");
+	
 	public void setAst(AST ast)
 	{
 		this.ast = ast;
-		conf.set(PROP_AST, objectToBase64(ast));
+		set(PROP_AST, objectToBase64(ast));
 	}
 	
 	public AST getAst()
 	{
 		if (ast == null) {
-			ast = (AST) base64ToObject(conf.get(PROP_AST));
+			ast = (AST) base64ToObject(get(PROP_AST));
 		}
 		return ast;
 	}
@@ -91,13 +98,13 @@ public class XQueryJobConf {
 	public void setStaticContext(StaticContext sctx)
 	{
 		this.sctx = sctx;
-		conf.set(PROP_SCTX, objectToBase64(sctx));
+		set(PROP_SCTX, objectToBase64(sctx));
 	}
 	
 	public StaticContext getStaticContext()
 	{
 		if (sctx == null) {
-			sctx = (StaticContext) base64ToObject(conf.get(PROP_SCTX));
+			sctx = (StaticContext) base64ToObject(get(PROP_SCTX));
 		}
 		return sctx;
 	}
@@ -108,7 +115,7 @@ public class XQueryJobConf {
 	
 	public Tuple getTuple()
 	{
-		String str = conf.get(PROP_TUPLE);
+		String str = get(PROP_TUPLE);
 		if (str == null) {
 			return null;
 		}
@@ -117,26 +124,28 @@ public class XQueryJobConf {
 	
 	public void setTargets(Targets targets)
 	{
-		conf.set(PROP_TARGETS, objectToBase64(targets));
+		if (targets != null) {
+			set(PROP_TARGETS, objectToBase64(targets));
+		}
 	}
 	
 	public Targets getTargets()
 	{
-		return (Targets) base64ToObject(conf.get(PROP_TARGETS));
+		return (Targets) base64ToObject(get(PROP_TARGETS));
 	}
 	
 	public void setSeqNumber(int seq)
 	{
-		conf.set(PROP_SEQ_NUMBER, Integer.toString(seq));
+		set(PROP_SEQ_NUMBER, Integer.toString(seq));
 	}
 	
 	public int getSeqNumber()
 	{
-		Integer seq = Integer.valueOf(conf.get(PROP_SEQ_NUMBER));
+		Integer seq = Integer.valueOf(get(PROP_SEQ_NUMBER));
 		return seq != null ? seq : 0;
 	}
 	
-	public void parseInputs() throws IOException
+	public void parseInputsAndOutputs() throws IOException
 	{
 		AST node = getAst();
 		while (node != null && node.getType() != XQExt.Shuffle && node.getType() != XQ.Start) {
@@ -159,6 +168,8 @@ public class XQueryJobConf {
 		else {
 			parseForBind(node.getParent());
 		}
+		
+		FileOutputFormat.setOutputPath(this, new Path(OUTPUT_DIR));
 	}
 	
 	private void parseForBind(AST forBind) throws IOException
@@ -186,27 +197,32 @@ public class XQueryJobConf {
 	
 	private void addInputFormat(String className)
 	{
-		String formats = conf.get(PROP_INPUT_FORMATS);
+		String formats = get(PROP_INPUT_FORMATS);
 		if (formats == null) {
-			formats = "";
+			set(PROP_INPUT_FORMATS, className);
 		}
-		conf.set(PROP_INPUT_FORMATS, formats + "," + className);
+		else {
+			set(PROP_INPUT_FORMATS, formats + "," + className);
+		}
 	}
 	
 	private void addInputPath(String path)
 	{
-		String paths = conf.get(PROP_INPUT_PATHS);
+		String paths = get(PROP_INPUT_PATHS);
 		if (paths == null) {
-			paths = "";
+			set(PROP_INPUT_PATHS, path);
 		}
-		conf.set(PROP_INPUT_FORMATS, paths + "," + path);
+		else {
+			set(PROP_INPUT_PATHS, paths + "," + path);
+		}
+		FileInputFormat.addInputPath(this, new Path(path));
 	}
 	
 	@SuppressWarnings("unchecked")
 	public List<Class<? extends InputFormat<?, ?>>> getInputFormats() throws IOException
 	{
 		try {
-			String formatStr = conf.get(PROP_INPUT_FORMATS);
+			String formatStr = get(PROP_INPUT_FORMATS);
 			String[] classes = formatStr.split(",");
 			List<Class<? extends InputFormat<?, ?>>> result =
 					new ArrayList<Class<? extends InputFormat<?,?>>>();
@@ -222,7 +238,7 @@ public class XQueryJobConf {
 	
 	public String[] getInputPaths()
 	{
-		String paths = conf.get(PROP_INPUT_PATHS);
+		String paths = get(PROP_INPUT_PATHS);
 		return paths == null ? null : paths.split(",");
 	}
 	
