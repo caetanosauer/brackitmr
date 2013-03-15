@@ -18,11 +18,7 @@ public class CollectionInputFormat<K, V> extends InputFormat<K, V> {
 	public RecordReader<K, V> createRecordReader(InputSplit split, TaskAttemptContext context)
 		throws IOException, InterruptedException
 	{
-		@SuppressWarnings("unchecked")
-		Class<? extends InputFormat<K, V>> cls =
-			(Class<? extends InputFormat<K, V>>) ((CollectionInputSplit) split).getInputFormatClass();
-		InputFormat<K, V> format = ReflectionUtils.newInstance(cls, context.getConfiguration());
-		return format.createRecordReader(split, context);
+		return new CollectionRecordReader<K,V>(split, context);
 	}
 
 	@Override
@@ -35,7 +31,7 @@ public class CollectionInputFormat<K, V> extends InputFormat<K, V> {
 		for (int i = 0; i < formats.size(); i++) {
 			InputFormat<?,?> format = ReflectionUtils.newInstance(formats.get(i), context.getConfiguration());
 			for (InputSplit split : format.getSplits(context)) {
-				result.add(new CollectionInputSplit(split, formats.get(i), i));
+				result.add(new CollectionInputSplit(split, formats.get(i), i, context.getConfiguration()));
 			}
 		}
 		

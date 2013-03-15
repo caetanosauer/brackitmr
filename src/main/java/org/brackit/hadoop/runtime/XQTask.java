@@ -41,7 +41,6 @@ public class XQTask {
 				if (node.getType() == XQExt.Shuffle) {
 					int branch = ((CollectionInputSplit) context.getInputSplit()).getAstBranch();
 					node = node.getChild(branch);
-					
 				}
 				else {
 					node = ast;

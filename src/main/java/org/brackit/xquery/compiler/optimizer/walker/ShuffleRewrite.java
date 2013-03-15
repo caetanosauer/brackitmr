@@ -33,6 +33,7 @@ import org.brackit.xquery.compiler.XQExt;
 
 public class ShuffleRewrite extends Walker {
 
+	
 	@Override
 	protected AST visit(AST node)
 	{
@@ -111,12 +112,16 @@ public class ShuffleRewrite extends Walker {
 		AST next = node.getLastChild();
 		AST parent = node.getParent();
 	
-		// TODO key specs should be under phaseOut
+		int[] keyIndexes = new int[node.getChildCount() - 1];
+		
 		// TODO add rule to extract order by key into variable
 		for (int i = 0; i < node.getChildCount() - 1; i++) {
 			AST shuffleSpec = new AST(XQExt.ShuffleSpec);
 			AST orderSpec = node.getChild(i);
-			shuffleSpec.addChild(orderSpec.getChild(0));
+			AST varRef = orderSpec.getChild(0);
+			
+			keyIndexes[i] = (Integer) varRef.getProperty("pos");
+			shuffleSpec.addChild(varRef);
 			
 			for (int j = 1; j < orderSpec.getChildCount(); j++) {
 				AST modifier = orderSpec.getChild(i);
@@ -134,7 +139,12 @@ public class ShuffleRewrite extends Walker {
 					shuffleSpec.setProperty("collation", modifier.getChild(0).getStringValue());
 				}
 			}
+			
+			phaseOut.addChild(shuffleSpec);
 		}
+		
+		phaseIn.setProperty("keyIndexes", keyIndexes);
+		phaseOut.setProperty("keyIndexes", keyIndexes);
 		
 		phaseOut.addChild(next);
 		shuffle.addChild(phaseOut);

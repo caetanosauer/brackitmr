@@ -170,6 +170,11 @@ public class XQueryJobConf extends JobConf {
 		}
 		
 		FileOutputFormat.setOutputPath(this, new Path(OUTPUT_DIR));
+		
+		setStrings("io.serializations",
+				"org.brackit.hadoop.io.TupleSerialization",
+				"org.brackit.hadoop.io.KeySerialization",
+				get("io.serializations"));
 	}
 	
 	private void parseForBind(AST forBind) throws IOException
