@@ -276,6 +276,7 @@ public class XQueryJobConf extends JobConf {
 			return ois.readObject();
 		}
 		catch (Exception e) {
+			e.printStackTrace(System.err);
 			return null;
 		}
 	}

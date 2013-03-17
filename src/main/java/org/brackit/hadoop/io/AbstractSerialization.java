@@ -63,7 +63,7 @@ public abstract class AbstractSerialization extends Configured {
 			// we need to know the types of the tuples being read/written
 			// if we are reading, the task must be either an id-mapper or any kind of reducer
 			//   if it's an id mapper, the types are in the PhaseOut below the shuffle, which is copied to the Shuffle itself
-			//   if it's a reducer, the types are in the PhaseIn leaf at the tag branch of the shuffle
+			//   if it's a reducer, the types are in the PhaseIn parent
 			// if we are writing, the task must be a normal (non-id, non-final) mapper of any kind or a mid reducer
 			//   if it's a mapper, types are in the PhaseOut node at the tag child index of the shuffle
 			//	 if it's a mid reducer, types are in the PhaseOut in the root of the AST
@@ -74,11 +74,7 @@ public abstract class AbstractSerialization extends Configured {
 				}
 				else {
 					for (int i = 0; i < node.getChildCount(); i++) {
-						AST end = node.getChild(i);
-						while (end.getType() != XQExt.PhaseIn) {
-							end = end.getLastChild();
-						}
-						extractTypesAndIndexes(end, i);
+						extractTypesAndIndexes(node.getParent(), i);
 					}
 				}
 			}

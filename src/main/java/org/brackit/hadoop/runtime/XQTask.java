@@ -7,12 +7,14 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.brackit.hadoop.io.CollectionInputSplit;
 import org.brackit.hadoop.job.XQueryJobConf;
 import org.brackit.xquery.QueryException;
+import org.brackit.xquery.Tuple;
 import org.brackit.xquery.compiler.AST;
 import org.brackit.xquery.compiler.Target;
 import org.brackit.xquery.compiler.Targets;
 import org.brackit.xquery.compiler.XQ;
 import org.brackit.xquery.compiler.XQExt;
 import org.brackit.xquery.compiler.translator.MRTranslator;
+import org.brackit.xquery.operator.TupleImpl;
 import org.brackit.xquery.xdm.Expr;
 
 public class XQTask {
@@ -46,8 +48,13 @@ public class XQTask {
 					node = ast;
 				}
 				
+				Tuple tuple = conf.getTuple();
+				if (tuple == null) {
+					tuple = new TupleImpl();
+				}
+				
 				Expr expr = translator.expression(conf.getStaticContext(), node, false);
-				expr.evaluate(hctx, conf.getTuple());
+				expr.evaluate(hctx, tuple);
 			}
 			catch (QueryException e) {
 				throw new IOException(e);
@@ -79,8 +86,13 @@ public class XQTask {
 				}
 				node.getParent().deleteChild(node.getChildIndex());
 				
+				Tuple tuple = conf.getTuple();
+				if (tuple == null) {
+					tuple = new TupleImpl();
+				}
+				
 				Expr expr = translator.expression(conf.getStaticContext(), ast, false);
-				expr.evaluate(hctx, conf.getTuple());
+				expr.evaluate(hctx, tuple);
 			}
 			catch (QueryException e) {
 				throw new IOException(e);

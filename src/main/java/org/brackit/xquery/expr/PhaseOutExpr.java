@@ -1,5 +1,7 @@
 package org.brackit.xquery.expr;
 
+import java.io.IOException;
+
 import org.apache.hadoop.mapreduce.TaskInputOutputContext;
 import org.brackit.hadoop.runtime.HadoopQueryContext;
 import org.brackit.hadoop.runtime.XQGroupingKey;
@@ -42,13 +44,18 @@ public class PhaseOutExpr implements Expr {
 		try {
 			Tuple t = c.next(hctx);
 			while (t != null) {
-				context.write(new XQGroupingKey(tuple, isJoin, keyIndexes), tuple);
+				context.write(new XQGroupingKey(t, isJoin, keyIndexes), t);
 				t = c.next(hctx);
 			}
 		}
-		catch (Exception e) {
+		catch (InterruptedException e) {
 			throw new QueryException(e, ErrorCode.BIT_DYN_ABORTED_ERROR);
 		}
+		catch (IOException e) {
+			throw new QueryException(e, ErrorCode.BIT_DYN_ABORTED_ERROR);
+		}
+		
+		c.close(ctx);
 		
 		return new Bool(true);
 	}

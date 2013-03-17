@@ -1,6 +1,6 @@
 package org.brackit.xquery.operator;
 
-import org.apache.hadoop.mapreduce.MapContext;
+import org.apache.hadoop.mapreduce.ReduceContext;
 import org.brackit.hadoop.runtime.HadoopQueryContext;
 import org.brackit.hadoop.runtime.XQGroupingKey;
 import org.brackit.xquery.ErrorCode;
@@ -21,11 +21,11 @@ public class PhaseIn implements Operator {
 	
 	private class PhaseInCursor implements Cursor {
 
-		MapContext<?,?,?,?> context;
+		ReduceContext<?,?,?,?> context;
 		
 		public void open(QueryContext ctx) throws QueryException
 		{
-			context = ((HadoopQueryContext) ctx).getMapContext();
+			context = ((HadoopQueryContext) ctx).getReduceContext();
 		}
 
 		public Tuple next(QueryContext ctx) throws QueryException

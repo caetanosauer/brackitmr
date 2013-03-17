@@ -25,29 +25,18 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.xquery.compiler;
+package org.brackit.hadoop.runtime;
 
-public class XQExt {
-	
-	private static final int OFFSET = XQ.allocate(10);
+import org.apache.hadoop.mapreduce.Partitioner;
+import org.brackit.xquery.Tuple;
 
-	public static final int Shuffle = OFFSET + 0;
-	public static final int ShuffleSpec = OFFSET + 1;
-	public static final int PhaseIn = OFFSET + 2;
-	public static final int PhaseOut = OFFSET + 3;
-	public static final int TagSplitter = OFFSET + 4;
+public class XQJoinKeyPartitioner extends Partitioner<XQGroupingKey, Tuple> {
 
-	public static final String NAMES[] = new String[] {
-		"Shuffle",
-		"ShuffleSpec",
-		"PhaseIn",
-		"PhaseOut",
-		"TagSplitter"
-	};
-
-	public static final AST createNode(int key)
+	public int getPartition(XQGroupingKey key, Tuple value, int numPartitions)
 	{
-		return new AST(key, NAMES[key - OFFSET]);
+		// a tuple emitted by a pre-join phase always has join key and join tag as last fields
+		int result = (key.joinHashCode() & Integer.MAX_VALUE) % numPartitions;
+		return result;
 	}
-}
 
+}

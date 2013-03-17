@@ -35,16 +35,20 @@ import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.brackit.hadoop.io.CollectionInputFormat;
+import org.brackit.hadoop.runtime.XQGroupingKey;
+import org.brackit.hadoop.runtime.XQRawKeyComparator;
 import org.brackit.hadoop.runtime.XQTask;
 import org.brackit.xquery.compiler.AST;
 import org.brackit.xquery.compiler.XQ;
 import org.brackit.xquery.compiler.XQExt;
+import org.brackit.xquery.operator.TupleImpl;
 import org.brackit.xquery.util.Cfg;
 
 public class XQueryJob extends Job {
 	
 	private boolean isLeaf = false;
 	private boolean isRoot = false;
+	private boolean hasShuffle = false;
 	
 	private static int NUM_REDUCERS = Cfg.asInt(XQueryJobConf.PROP_NUM_REDUCERS, 10);
 	
@@ -53,11 +57,18 @@ public class XQueryJob extends Job {
 		super(conf);
 		
 		walkAst(conf.getAst());
-		setMapperClass(isLeaf && isRoot ? Mapper.class : XQTask.XQMapper.class);
+		setMapperClass(isLeaf ? XQTask.XQMapper.class : Mapper.class);
 		setReducerClass(XQTask.XQReducer.class);
-		setNumReduceTasks(isLeaf && isRoot ? 0 : NUM_REDUCERS);
+		setNumReduceTasks(hasShuffle ? NUM_REDUCERS : 0);
 		setInputFormatClass(isLeaf ? CollectionInputFormat.class : SequenceFileInputFormat.class);
 		setOutputFormatClass(isRoot ? TextOutputFormat.class : SequenceFileOutputFormat.class);
+		
+		if (hasShuffle) {
+			setMapOutputKeyClass(XQGroupingKey.class);
+			setMapOutputValueClass(TupleImpl.class);
+			setGroupingComparatorClass(XQRawKeyComparator.class);
+			setSortComparatorClass(XQRawKeyComparator.class);
+		}
 	}
 	
 	private void walkAst(AST node)
@@ -72,6 +83,7 @@ public class XQueryJob extends Job {
 			isLeaf = true;
 		}
 		if (node.getType() == XQExt.Shuffle) {
+			hasShuffle = true;
 			for (int i = 0; i < node.getChildCount(); i++) {
 				walkAst(node.getChild(i));
 			}

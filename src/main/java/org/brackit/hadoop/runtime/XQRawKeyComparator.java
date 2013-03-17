@@ -25,29 +25,32 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.xquery.compiler;
+package org.brackit.hadoop.runtime;
 
-public class XQExt {
-	
-	private static final int OFFSET = XQ.allocate(10);
+import org.apache.hadoop.io.RawComparator;
 
-	public static final int Shuffle = OFFSET + 0;
-	public static final int ShuffleSpec = OFFSET + 1;
-	public static final int PhaseIn = OFFSET + 2;
-	public static final int PhaseOut = OFFSET + 3;
-	public static final int TagSplitter = OFFSET + 4;
+public class XQRawKeyComparator implements RawComparator<XQGroupingKey> {
 
-	public static final String NAMES[] = new String[] {
-		"Shuffle",
-		"ShuffleSpec",
-		"PhaseIn",
-		"PhaseOut",
-		"TagSplitter"
-	};
-
-	public static final AST createNode(int key)
+	public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2)
 	{
-		return new AST(key, NAMES[key - OFFSET]);
+		int length = l1 < l2 ? l1 : l2;
+		for (int i = 0; i < length; i++)
+		{
+			// anding with 0xff ignores the signal
+			int x = (b1[s1 + i] & 0xff);
+			int y = (b2[s2 + i] & 0xff);
+			if (x != y) {
+				return x - y;
+			}
+		}
+		return l1 - l2;
 	}
-}
 
+	public int compare(XQGroupingKey o1, XQGroupingKey o2)
+	{
+		return o1.compareTo(o2);
+	}
+
+
+
+}

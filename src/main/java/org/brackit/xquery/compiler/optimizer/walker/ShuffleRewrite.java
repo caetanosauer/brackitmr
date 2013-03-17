@@ -51,10 +51,10 @@ public class ShuffleRewrite extends Walker {
 
 	private AST join(AST node)
 	{
-		AST phaseOut = new AST(XQExt.PhaseOut);
-		AST phaseIn = new AST(XQExt.PhaseIn);
-		AST tagSplitter = new AST(XQExt.TagSplitter);
-		AST shuffle = new AST(XQExt.Shuffle);
+		AST phaseOut = XQExt.createNode(XQExt.PhaseOut);
+		AST phaseIn = XQExt.createNode(XQExt.PhaseIn);
+		AST tagSplitter = XQExt.createNode(XQExt.TagSplitter);
+		AST shuffle = XQExt.createNode(XQExt.Shuffle);
 		AST next = node.getLastChild();
 		AST parent = node.getParent();
 		
@@ -70,9 +70,9 @@ public class ShuffleRewrite extends Walker {
 
 	private AST groupBy(AST node)
 	{
-		AST phaseOut = new AST(XQExt.PhaseOut);
-		AST phaseIn = new AST(XQExt.PhaseIn);
-		AST shuffle = new AST(XQExt.Shuffle);
+		AST phaseOut = XQExt.createNode(XQExt.PhaseOut);
+		AST phaseIn = XQExt.createNode(XQExt.PhaseIn);
+		AST shuffle = XQExt.createNode(XQExt.Shuffle);
 		AST next = node.getLastChild();
 		AST parent = node.getParent();
 		
@@ -83,7 +83,7 @@ public class ShuffleRewrite extends Walker {
 		for (int i = 0; i < postGroup.getChildCount(); i++) {
 			AST spec = postGroup.getChild(i);
 			if (spec.getType() == XQ.GroupBySpec) {
-				AST shuffleSpec = new AST(XQExt.ShuffleSpec); 
+				AST shuffleSpec = XQExt.createNode(XQExt.ShuffleSpec); 
 				shuffleSpec.addChild(spec.getChild(0).copy());
 				shuffle.addChild(shuffleSpec);
 			}
@@ -106,9 +106,17 @@ public class ShuffleRewrite extends Walker {
 
 	private AST orderBy(AST node)
 	{
-		AST phaseOut = new AST(XQExt.PhaseOut);
-		AST phaseIn = new AST(XQExt.PhaseIn);
-		AST shuffle = new AST(XQExt.Shuffle);
+		AST phaseOut = XQExt.createNode(XQExt.PhaseOut);
+		AST phaseIn = XQExt.createNode(XQExt.PhaseIn);
+		AST shuffle = XQExt.createNode(XQExt.Shuffle);
+		phaseOut.setProperty("types", node.getProperty("types"));
+		phaseOut.setProperty("keyIndexes", node.getProperty("keyIndexes"));
+		phaseIn.setProperty("types", node.getProperty("types"));
+		phaseIn.setProperty("keyIndexes", node.getProperty("keyIndexes"));
+		shuffle.setProperty("types", node.getProperty("types"));
+		shuffle.setProperty("keyIndexes", node.getProperty("keyIndexes"));
+		
+		
 		AST next = node.getLastChild();
 		AST parent = node.getParent();
 	
@@ -116,7 +124,7 @@ public class ShuffleRewrite extends Walker {
 		
 		// TODO add rule to extract order by key into variable
 		for (int i = 0; i < node.getChildCount() - 1; i++) {
-			AST shuffleSpec = new AST(XQExt.ShuffleSpec);
+			AST shuffleSpec = XQExt.createNode(XQExt.ShuffleSpec);
 			AST orderSpec = node.getChild(i);
 			AST varRef = orderSpec.getChild(0);
 			
@@ -151,7 +159,7 @@ public class ShuffleRewrite extends Walker {
 		phaseIn.addChild(shuffle);
 		parent.replaceChild(parent.getChildCount() - 1, phaseIn);
 		
-		return phaseOut.getLastChild();
+		return parent;
 	}
 
 }

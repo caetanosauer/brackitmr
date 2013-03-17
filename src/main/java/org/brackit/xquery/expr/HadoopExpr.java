@@ -84,7 +84,7 @@ public final class HadoopExpr implements Expr {
 			trimJob(s.children.get(0), s, seq++, ctx, tuple);
 		}
 		AST root = s.shuffle;
-		while (root.getParent().getType() != XQExt.Shuffle || root.getType() != XQ.End) {
+		while (root.getParent().getType() != XQExt.Shuffle && root.getType() != XQ.End) {
 			root = root.getParent();
 		}
 		root.getParent().deleteChild(root.getChildIndex());
@@ -95,7 +95,7 @@ public final class HadoopExpr implements Expr {
 			s.shuffle = null;
 		}		
 		
-		run (root, ctx, tuple);
+		run (root.copyTree(), ctx, tuple);
 	}
 	
 	private int run(AST root, QueryContext ctx, Tuple tuple) throws IOException, QueryException

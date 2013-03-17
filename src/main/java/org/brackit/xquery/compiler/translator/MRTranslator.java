@@ -38,9 +38,9 @@ import org.brackit.xquery.atomic.Str;
 import org.brackit.xquery.compiler.AST;
 import org.brackit.xquery.compiler.XQ;
 import org.brackit.xquery.compiler.XQExt;
+import org.brackit.xquery.expr.HDFSOutputExpr;
 import org.brackit.xquery.expr.HadoopExpr;
 import org.brackit.xquery.expr.PhaseOutExpr;
-import org.brackit.xquery.expr.PipeExpr;
 import org.brackit.xquery.operator.Operator;
 import org.brackit.xquery.operator.PhaseIn;
 import org.brackit.xquery.xdm.Expr;
@@ -63,7 +63,7 @@ public class MRTranslator extends BottomUpTranslator {
 			return phaseOut(node);
 		}
 		if (node.getType() == XQ.End) {
-			return new PipeExpr(anyOp(node.getLastChild()), anyExpr(node.getChild(1)));
+			return end(node);
 		}
 		return super.anyExpr(node);
 	}
@@ -73,7 +73,7 @@ public class MRTranslator extends BottomUpTranslator {
 	{
 		return new HadoopExpr(sctx, node, conf);
 	}
-
+	
 	@Override
 	protected Operator anyOp(AST node) throws QueryException
 	{
@@ -90,12 +90,13 @@ public class MRTranslator extends BottomUpTranslator {
 	{
 		int[] indexes = new int[node.getChildCount() - 1];
 		for (int i = 0; i < indexes.length; i++) {
-			AST child = node.getChild(i);
+			AST child = node.getChild(i).getChild(0);
+			// get varref from shufflespec
 			if (child.getType() != XQ.VariableRef) {
 				throw new QueryException(ErrorCode.BIT_DYN_RT_ILLEGAL_ARGUMENTS_ERROR,
 						"PhaseOut requires variable references as parameters");
 			}
-			Integer pos = (Integer) node.getProperty("pos");
+			Integer pos = (Integer) child.getProperty("pos");
 			if (pos == null) {
 				throw new QueryException(ErrorCode.BIT_DYN_RT_ILLEGAL_ARGUMENTS_ERROR,
 						"Variable references have not been resolved");
@@ -103,6 +104,11 @@ public class MRTranslator extends BottomUpTranslator {
 			indexes[i] = pos;
 		}
 		return new PhaseOutExpr(anyOp(node.getLastChild()), indexes, node.checkProperty("isJoin"));
+	}
+	
+	protected Expr end(AST node) throws QueryException
+	{
+		return new HDFSOutputExpr(anyOp(node.getLastChild()), anyExpr(node.getChild(0)));
 	}
 	
 	protected Operator phaseIn(AST node) throws QueryException
