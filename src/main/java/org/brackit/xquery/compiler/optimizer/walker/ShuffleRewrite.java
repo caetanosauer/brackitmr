@@ -182,14 +182,16 @@ public class ShuffleRewrite extends Walker {
 		AST phaseOut = createNode(node, XQExt.PhaseOut);
 		AST phaseIn = createNode(node, XQExt.PhaseIn);
 		AST shuffle = createNode(node, XQExt.Shuffle);
+		shuffle.setProperty("skipSort", true);
 		
 		AST next = node.getLastChild();
 		AST parent = node.getParent();
-	
-		int[] keyIndexes = new int[node.getChildCount() - 1];
+		
+		node.deleteChild(node.getChildCount() - 1);	
+		int[] keyIndexes = new int[node.getChildCount() ];
 		
 		// TODO add rule to extract order by key into variable
-		for (int i = 0; i < node.getChildCount() - 1; i++) {
+		for (int i = 0; i < keyIndexes.length; i++) {
 			AST shuffleSpec = XQExt.createNode(XQExt.ShuffleSpec);
 			AST orderSpec = node.getChild(i);
 			AST varRef = orderSpec.getChild(0);
@@ -220,7 +222,10 @@ public class ShuffleRewrite extends Walker {
 		phaseIn.setProperty("keyIndexes", keyIndexes);
 		phaseOut.setProperty("keyIndexes", keyIndexes);
 		
-		phaseOut.addChild(next);
+		node.setProperty("local", true);
+		
+		node.addChild(next);
+		phaseOut.addChild(node);
 		shuffle.addChild(phaseOut);
 		phaseIn.addChild(shuffle);
 		parent.replaceChild(parent.getChildCount() - 1, phaseIn);

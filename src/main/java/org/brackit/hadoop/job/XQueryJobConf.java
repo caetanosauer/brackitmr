@@ -52,8 +52,12 @@ import org.brackit.xquery.compiler.Targets;
 import org.brackit.xquery.compiler.XQ;
 import org.brackit.xquery.compiler.XQExt;
 import org.brackit.xquery.module.StaticContext;
+import org.brackit.xquery.operator.TupleImpl;
 import org.brackit.xquery.util.Cfg;
+import org.brackit.xquery.util.io.XDMInputStream;
+import org.brackit.xquery.util.io.XDMOutputStream;
 import org.brackit.xquery.xdm.Collection;
+import org.brackit.xquery.xdm.Sequence;
 
 public class XQueryJobConf extends JobConf {
 
@@ -111,8 +115,22 @@ public class XQueryJobConf extends JobConf {
 		return sctx;
 	}
 
-	public void setTuple(Tuple tuple) {
-		// TODO use tuple serialization
+	public void setTuple(Tuple tuple) 
+	{
+		try {
+			ByteArrayOutputStream bos = new ByteArrayOutputStream();
+			XDMOutputStream xos = new XDMOutputStream(bos);
+			xos.writeByte(tuple.getSize());
+			for (int i = 0; i < tuple.getSize(); i++) {
+				xos.writeSequence(tuple.get(i));
+			}
+			set(PROP_TUPLE, Base64.encodeBase64String(bos.toByteArray()));
+			xos.close();
+		}
+		catch (Exception e) {
+			e.printStackTrace(System.err);
+		}
+		
 	}
 	
 	public Tuple getTuple()
@@ -121,7 +139,22 @@ public class XQueryJobConf extends JobConf {
 		if (str == null) {
 			return null;
 		}
-		return null; // TODO use tuple deserialization
+		try {
+			ByteArrayInputStream bis =
+					new ByteArrayInputStream(Base64.decodeBase64(get(PROP_TUPLE)));
+			XDMInputStream xis = new XDMInputStream(bis);
+			int size = xis.readByte();
+			Sequence[] seqs = new Sequence[size];
+			for (int i = 0; i < size; i++) {
+				seqs[i] = xis.readSequence();
+			}
+			xis.close();
+			return new TupleImpl(seqs);
+		}
+		catch (Exception e) {
+			e.printStackTrace(System.err);
+			return null;
+		}
 	}
 	
 	public void setTargets(Targets targets)
@@ -269,6 +302,7 @@ public class XQueryJobConf extends JobConf {
 			data = bos.toByteArray();
 		}
 		catch (Exception e) {
+			e.printStackTrace(System.err);
 			return null;
 		}
 		
