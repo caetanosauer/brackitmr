@@ -177,14 +177,15 @@ public class XQueryJobConf extends JobConf {
 				get("io.serializations"));
 	}
 	
-	private void parseForBind(AST forBind) throws IOException
+	private void parseForBind(AST bind) throws IOException
 	{
 		StaticContext sctx = getStaticContext();
-		if (forBind.getType() != XQ.ForBind) {
+		if (bind.getType() != XQ.ForBind && bind.getType() != XQ.MultiBind) {
 			throw new IOException("MapReduce queries must begin with a ForBind operator");
 		}
 		// TODO: here we assume for bind is always to collection
-		String collName = forBind.getChild(1).getChild(0).getStringValue();
+		AST funCall = bind.getType() == XQ.ForBind ? bind.getChild(1) : bind.getChild(0).getChild(1);
+		String collName = funCall.getChild(0).getStringValue();
 		Collection<?> coll = sctx.getCollections().resolve(collName);
 		if (coll == null) {
 			throw new IOException("Could not find declared collection " + collName);

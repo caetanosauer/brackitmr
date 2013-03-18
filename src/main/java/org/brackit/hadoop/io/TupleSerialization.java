@@ -106,10 +106,16 @@ public class TupleSerialization extends AbstractSerialization implements Seriali
 				}
 				
 				for (int i = 0; i < width; i++) {
+					boolean isKey = false;
 					for (int j = 0; j < keyIndexes.length; j++) {
-						if (keyIndexes[tag][j] == i) return;
+						if (keyIndexes[tag][j] == i) {
+							isKey = true;
+							break;
+						}
 					}
-					out.writeSequence(t.get(i), types.get(i));
+					if (!isKey) {
+						out.writeSequence(t.get(i), types.get(i));
+					}
 				}
 			}
 			catch (QueryException e) {

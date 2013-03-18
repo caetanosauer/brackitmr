@@ -70,7 +70,7 @@ public class HDFSOutputExpr implements Expr {
 				(TaskInputOutputContext<?, ?, NullWritable, Text>) hctx.getOutputContext();
 		
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
-		Serializer ser = new CSVSerializer(new PrintStream(bos), CSVFileIter.DEFAULT_DELIM, false);
+		Serializer ser = new CSVSerializer(new PrintStream(bos), CSVFileIter.DEFAULT_DELIM, false, true);
 		
 		try{
 			Cursor c = in.create(ctx, tuple);
