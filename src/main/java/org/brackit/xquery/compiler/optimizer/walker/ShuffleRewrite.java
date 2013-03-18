@@ -27,6 +27,7 @@
  */
 package org.brackit.xquery.compiler.optimizer.walker;
 
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.compiler.AST;
 import org.brackit.xquery.compiler.XQ;
 import org.brackit.xquery.compiler.XQExt;
@@ -79,6 +80,8 @@ public class ShuffleRewrite extends Walker {
 		AST phaseOut = createNode(node, XQExt.PhaseOut);
 		AST phaseIn = createNode(node, XQExt.PhaseIn);
 		AST shuffle = createNode(node, XQExt.Shuffle);
+		AST orderBy = createNode(node.getLastChild(), XQ.OrderBy);
+		orderBy.setProperty("local", true);
 		
 		AST next = node.getLastChild();
 		AST parent = node.getParent();
@@ -93,7 +96,7 @@ public class ShuffleRewrite extends Walker {
 		for (int i = 0; i < postGroup.getChildCount(); i++) {
 			AST spec = postGroup.getChild(i);
 			if (spec.getType() == XQ.GroupBySpec) {
-				AST shuffleSpec = XQExt.createNode(XQExt.ShuffleSpec); 
+				AST shuffleSpec = XQExt.createNode(XQExt.ShuffleSpec);
 				shuffleSpec.addChild(spec.getChild(0).copy());
 				phaseOut.addChild(shuffleSpec);
 				keyLen++;
@@ -120,7 +123,40 @@ public class ShuffleRewrite extends Walker {
 		phaseIn.setProperty("keyIndexes", keyIndexes);
 		phaseOut.setProperty("keyIndexes", keyIndexes);
 		
-		preGroup.addChild(next);
+		AST child = next;
+		while (child != null && child.getType() != XQ.OrderBy) {
+			child = child.getLastChild();
+		}
+		boolean addOrderBy = true;
+		if (child != null && child.getChildCount() == keyLen + 1) {
+			int i = 0;
+			while (i < child.getChildCount() - 1) {
+				AST key = child.getChild(i).getChild(0);
+				if (key.getType() == XQ.VariableRef) {
+					QNm var = (QNm) key.getValue();
+					QNm gVar = (QNm) preGroup.getChild(i).getChild(0).getValue();
+					if (var.atomicCmp(gVar) != 0) {
+						addOrderBy = false;
+						break;
+					}
+				}
+				i++;
+			}
+		}
+		if (addOrderBy) {
+			for (int j = 0; j < keyLen; j++) {
+				AST orderBySpec = new AST(XQ.OrderBySpec);
+				orderBySpec.addChild(preGroup.getChild(j).getChild(0).copy());
+				orderBy.addChild(orderBySpec);
+			}
+			orderBy.addChild(next);
+			preGroup.addChild(orderBy);
+			shuffle.setProperty("skipSort", true);
+		}
+		else {
+			preGroup.addChild(next);
+		}
+		
 		phaseOut.addChild(preGroup);
 		shuffle.addChild(phaseOut);
 		phaseIn.addChild(shuffle);
@@ -139,6 +175,10 @@ public class ShuffleRewrite extends Walker {
 
 	private AST orderBy(AST node)
 	{
+		if (node.checkProperty("local")) {
+			return node;
+		}
+		
 		AST phaseOut = createNode(node, XQExt.PhaseOut);
 		AST phaseIn = createNode(node, XQExt.PhaseIn);
 		AST shuffle = createNode(node, XQExt.Shuffle);

@@ -45,6 +45,7 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.brackit.hadoop.io.HadoopCSVCollection;
+import org.brackit.hadoop.runtime.DummySort;
 import org.brackit.xquery.Tuple;
 import org.brackit.xquery.compiler.AST;
 import org.brackit.xquery.compiler.Targets;
@@ -78,6 +79,7 @@ public class XQueryJobConf extends JobConf {
 	public static final String PROP_OUTPUT_DIR = "org.brackit.hadoop.outputDir";
 	public static final String PROP_INPUT_FORMATS = "org.brackit.hadoop.inputFormats";
 	public static final String PROP_INPUT_PATHS = "org.brackit.hadoop.inputPaths";
+	public static final String PROP_MAPPER_SORT = "map.sort.class";
 	
 	private static String OUTPUT_DIR = Cfg.asString(XQueryJobConf.PROP_OUTPUT_DIR, "./");
 	
@@ -145,6 +147,11 @@ public class XQueryJobConf extends JobConf {
 		return seq != null ? seq : 0;
 	}
 	
+	public void setDummySort()
+	{
+		set(PROP_MAPPER_SORT, DummySort.class.getName());
+	}
+	
 	public void parseInputsAndOutputs() throws IOException
 	{
 		AST node = getAst();
@@ -163,6 +170,9 @@ public class XQueryJobConf extends JobConf {
 					start = start.getLastChild();
 				}
 				parseForBind(start.getParent());
+			}
+			if (node.checkProperty("skipSort")) {
+				setDummySort();
 			}
 		}
 		else {

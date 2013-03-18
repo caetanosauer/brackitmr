@@ -47,7 +47,8 @@ public class XQExt {
 
 	public static final AST createNode(int key)
 	{
-		return new AST(key, NAMES[key - OFFSET]);
+		int pos = key - OFFSET;
+		return new AST(key, pos < 0 ? XQ.NAMES[key] : NAMES[pos]);
 	}
 }
 
