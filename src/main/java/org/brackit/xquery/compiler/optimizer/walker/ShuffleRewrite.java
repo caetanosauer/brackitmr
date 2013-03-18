@@ -51,10 +51,10 @@ public class ShuffleRewrite extends Walker {
 
 	private AST join(AST node)
 	{
-		AST phaseOut = XQExt.createNode(XQExt.PhaseOut);
-		AST phaseIn = XQExt.createNode(XQExt.PhaseIn);
-		AST tagSplitter = XQExt.createNode(XQExt.TagSplitter);
-		AST shuffle = XQExt.createNode(XQExt.Shuffle);
+		AST phaseOut = createNode(node, XQExt.PhaseOut);
+		AST phaseIn = createNode(node, XQExt.PhaseIn);
+		AST shuffle = createNode(node, XQExt.Shuffle);
+		AST tagSplitter = createNode(node, XQExt.TagSplitter);
 		AST next = node.getLastChild();
 		AST parent = node.getParent();
 		
@@ -70,52 +70,78 @@ public class ShuffleRewrite extends Walker {
 
 	private AST groupBy(AST node)
 	{
-		AST phaseOut = XQExt.createNode(XQExt.PhaseOut);
-		AST phaseIn = XQExt.createNode(XQExt.PhaseIn);
-		AST shuffle = XQExt.createNode(XQExt.Shuffle);
+		if (node.getLastChild().getType() == XQExt.PhaseIn ||
+			node.getParent().getType() == XQExt.PhaseOut)
+		{
+			return node;
+		}
+		
+		AST phaseOut = createNode(node, XQExt.PhaseOut);
+		AST phaseIn = createNode(node, XQExt.PhaseIn);
+		AST shuffle = createNode(node, XQExt.Shuffle);
+		
 		AST next = node.getLastChild();
 		AST parent = node.getParent();
 		
 		node.deleteChild(node.getChildCount() - 1);
-		AST preGroup = node.copy();
-		AST postGroup = node.copy();
+		node.setProperty("sequential", true);
+
+		AST postGroup = node.copyTree();
+		AST preGroup = node.copyTree();
 		
+		int keyLen = 0;
 		for (int i = 0; i < postGroup.getChildCount(); i++) {
 			AST spec = postGroup.getChild(i);
 			if (spec.getType() == XQ.GroupBySpec) {
 				AST shuffleSpec = XQExt.createNode(XQExt.ShuffleSpec); 
 				shuffleSpec.addChild(spec.getChild(0).copy());
-				shuffle.addChild(shuffleSpec);
+				phaseOut.addChild(shuffleSpec);
+				keyLen++;
 			}
 			else if (spec.getType() == XQ.AggregateSpec && spec.getChildCount() > 1) {
 				AST aggBind = spec.getChild(1);
-				if (aggBind.getChild(1).getType() == XQ.CountAgg) {
-					aggBind.replaceChild(1, new AST(XQ.SumAgg));
+				if (aggBind.getType() == XQ.AggregateBinding) {
+					if (aggBind.getChild(1).getType() == XQ.CountAgg) {
+						aggBind.replaceChild(1, new AST(XQ.SumAgg));
+					}
+					// TODO shouldnt we replace the VariableRef name with the one under Variable??
+					spec.replaceChild(1, aggBind.getChild(1));
 				}
-				// TODO generalize GroupBy to allow agg. spec of individual vars
 			}
+			
 		}
 		
-		phaseOut.addChild(next);
+		int[] keyIndexes = new int[keyLen];
+		for (int i = 0; i < keyLen; i++) {
+			Integer pos = (Integer) node.getChild(i).getChild(0).getProperty("pos");
+			keyIndexes[i] = pos;
+		}
+		
+		phaseIn.setProperty("keyIndexes", keyIndexes);
+		phaseOut.setProperty("keyIndexes", keyIndexes);
+		
+		preGroup.addChild(next);
+		phaseOut.addChild(preGroup);
 		shuffle.addChild(phaseOut);
 		phaseIn.addChild(shuffle);
-		parent.replaceChild(parent.getChildCount() - 1, phaseIn);
+		postGroup.addChild(phaseIn);
+		parent.replaceChild(parent.getChildCount() - 1, postGroup);
 		
-		return phaseOut.getLastChild();
+		return parent;
+	}
+	
+	private AST createNode(AST node, int type)
+	{
+		AST result = XQExt.createNode(type);
+		result.setProperty("types", node.getProperty("types"));
+		return result;
 	}
 
 	private AST orderBy(AST node)
 	{
-		AST phaseOut = XQExt.createNode(XQExt.PhaseOut);
-		AST phaseIn = XQExt.createNode(XQExt.PhaseIn);
-		AST shuffle = XQExt.createNode(XQExt.Shuffle);
-		phaseOut.setProperty("types", node.getProperty("types"));
-		phaseOut.setProperty("keyIndexes", node.getProperty("keyIndexes"));
-		phaseIn.setProperty("types", node.getProperty("types"));
-		phaseIn.setProperty("keyIndexes", node.getProperty("keyIndexes"));
-		shuffle.setProperty("types", node.getProperty("types"));
-		shuffle.setProperty("keyIndexes", node.getProperty("keyIndexes"));
-		
+		AST phaseOut = createNode(node, XQExt.PhaseOut);
+		AST phaseIn = createNode(node, XQExt.PhaseIn);
+		AST shuffle = createNode(node, XQExt.Shuffle);
 		
 		AST next = node.getLastChild();
 		AST parent = node.getParent();
