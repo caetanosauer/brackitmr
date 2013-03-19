@@ -67,11 +67,13 @@ public class XQueryJobConf extends JobConf {
 	public XQueryJobConf(Configuration conf)
 	{
 		super(conf);
+		setJobName("BrackitMRJob");
 	}
 	
 	public XQueryJobConf()
 	{
 		super();
+		setJobName("BrackitMRJob");
 	}
 	
 	public static final String PROP_AST = "org.brackit.hadoop.jobAst";
@@ -86,6 +88,11 @@ public class XQueryJobConf extends JobConf {
 	public static final String PROP_MAPPER_SORT = "map.sort.class";
 	
 	private static String OUTPUT_DIR = Cfg.asString(XQueryJobConf.PROP_OUTPUT_DIR, "./");
+	static {
+		if (OUTPUT_DIR.charAt(OUTPUT_DIR.length() - 1) != '/') {
+			OUTPUT_DIR = OUTPUT_DIR + "/";
+		}
+	}
 	
 	public void setAst(AST ast)
 	{
@@ -188,6 +195,7 @@ public class XQueryJobConf extends JobConf {
 	public void parseInputsAndOutputs() throws IOException
 	{
 		AST node = getAst();
+		boolean isRoot = node.getType() == XQ.End;
 		while (node != null && node.getType() != XQExt.Shuffle && node.getType() != XQ.Start) {
 			node = node.getLastChild();
 		}
@@ -197,22 +205,35 @@ public class XQueryJobConf extends JobConf {
 		}
 		
 		if (node.getType() == XQExt.Shuffle) {
-			for (int i = 0; i < node.getChildCount(); i++) {
-				AST start = node.getChild(i);
-				while (start.getType() != XQ.Start) {
-					start = start.getLastChild();
+			if (node.getChildCount() == 0) {
+				@SuppressWarnings("unchecked")
+				ArrayList<Integer> inputSeqs = (ArrayList<Integer>) node.getProperty("inputSeqs");
+				for (Integer inputSeq : inputSeqs) {
+					FileInputFormat.addInputPath(this, new Path(OUTPUT_DIR + getJobName() + "_temp_" + inputSeq));
 				}
-				parseForBind(start.getParent());
 			}
-			if (node.checkProperty("skipSort")) {
-				setDummySort();
+			else {
+				for (int i = 0; i < node.getChildCount(); i++) {
+					AST start = node.getChild(i);
+					while (start.getType() != XQ.Start) {
+						start = start.getLastChild();
+					}
+					parseForBind(start.getParent());
+				}
+				if (node.checkProperty("skipSort")) {
+					setDummySort();
+				}
 			}
 		}
 		else {
 			parseForBind(node.getParent());
 		}
 		
-		FileOutputFormat.setOutputPath(this, new Path(OUTPUT_DIR));
+		String jobOutput = getJobName();
+		if (!isRoot) {
+			jobOutput = jobOutput + "_temp_" + getSeqNumber();
+		}
+		FileOutputFormat.setOutputPath(this, new Path(OUTPUT_DIR + jobOutput));
 		
 		setStrings("io.serializations",
 				"org.brackit.hadoop.io.TupleSerialization",

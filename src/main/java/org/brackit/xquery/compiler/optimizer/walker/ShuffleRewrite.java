@@ -122,6 +122,7 @@ public class ShuffleRewrite extends Walker {
 		
 		phaseIn.setProperty("keyIndexes", keyIndexes);
 		phaseOut.setProperty("keyIndexes", keyIndexes);
+		shuffle.setProperty("keyIndexes", keyIndexes);
 		
 		AST child = next;
 		while (child != null && child.getType() != XQ.OrderBy) {
@@ -221,6 +222,7 @@ public class ShuffleRewrite extends Walker {
 		
 		phaseIn.setProperty("keyIndexes", keyIndexes);
 		phaseOut.setProperty("keyIndexes", keyIndexes);
+		shuffle.setProperty("keyIndexes", keyIndexes);
 		
 		node.setProperty("local", true);
 		

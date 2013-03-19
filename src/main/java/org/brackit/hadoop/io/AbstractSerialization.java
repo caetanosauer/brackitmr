@@ -64,8 +64,8 @@ public abstract class AbstractSerialization extends Configured {
 			// if we are reading, the task must be either an id-mapper or any kind of reducer
 			//   if it's an id mapper, the types are in the PhaseOut below the shuffle, which is copied to the Shuffle itself
 			//   if it's a reducer, the types are in the PhaseIn parent
-			// if we are writing, the task must be a normal (non-id, non-final) mapper of any kind or a mid reducer
-			//   if it's a mapper, types are in the PhaseOut node at the tag child index of the shuffle
+			// if we are writing, the task must be a normal non-final mapper or a mid reducer
+			//   if it's a normal mapper, types are in the PhaseOut node at the tag child index of the shuffle
 			//	 if it's a mid reducer, types are in the PhaseOut in the root of the AST
 			
 			if (reading) {
@@ -73,15 +73,18 @@ public abstract class AbstractSerialization extends Configured {
 					extractTypesAndIndexes(node, 0);
 				}
 				else {
-					for (int i = 0; i < node.getChildCount(); i++) {
-						extractTypesAndIndexes(node.getParent(), i);
-					}
+					extractTypesAndIndexes(node.getParent(), 0);
 				}
 			}
 			else {
 				if (isMapper()) {
-					for (int i = 0; i < node.getChildCount(); i++) {
-						extractTypesAndIndexes(node.getChild(i), i);
+					if (node.getChildCount() > 0) {
+						for (int i = 0; i < node.getChildCount(); i++) {
+							extractTypesAndIndexes(node.getChild(i), i);
+						}
+					}
+					else {
+						extractTypesAndIndexes(node, 0);
 					}
 				}
 				else {

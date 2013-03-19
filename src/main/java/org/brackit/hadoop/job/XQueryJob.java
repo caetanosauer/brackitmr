@@ -29,6 +29,9 @@ package org.brackit.hadoop.job;
 
 import java.io.IOException;
 
+import javax.xml.soap.Text;
+
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
@@ -62,6 +65,8 @@ public class XQueryJob extends Job {
 		setNumReduceTasks(hasShuffle ? NUM_REDUCERS : 0);
 		setInputFormatClass(isLeaf ? CollectionInputFormat.class : SequenceFileInputFormat.class);
 		setOutputFormatClass(isRoot ? TextOutputFormat.class : SequenceFileOutputFormat.class);
+		setOutputKeyClass(isRoot ? NullWritable.class : XQGroupingKey.class);
+		setOutputValueClass(isRoot ? Text.class : TupleImpl.class);
 		
 		if (hasShuffle) {
 			setMapOutputKeyClass(XQGroupingKey.class);

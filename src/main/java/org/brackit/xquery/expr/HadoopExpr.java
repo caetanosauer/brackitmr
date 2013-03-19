@@ -68,7 +68,7 @@ public final class HadoopExpr implements Expr {
 				trimJob(sTree, null, 0, ctx, tuple);
 			}
 			else {
-				run(ast, ctx, tuple);
+				run(ast, 0, ctx, tuple);
 			}
 			return new Bool(true);
 		}
@@ -77,34 +77,44 @@ public final class HadoopExpr implements Expr {
 		}
 	}
 	
-	private void trimJob(ShuffleTree s, ShuffleTree parent, int seq, QueryContext ctx, Tuple tuple)
+	private int trimJob(ShuffleTree s, ShuffleTree parent, int seq, QueryContext ctx, Tuple tuple)
 			throws IOException, QueryException
 	{
+		// process all inputs (depth-first)
+		int thisSeq = seq;
 		while (s.children.size() > 0) {
-			trimJob(s.children.get(0), s, seq++, ctx, tuple);
+			seq = trimJob(s.children.get(0), s, seq + 1, ctx, tuple);
 		}
+		
+		// detach job ast from parent job's ast
 		AST root = s.shuffle;
 		while (root.getParent().getType() != XQExt.Shuffle && root.getType() != XQ.End) {
 			root = root.getParent();
 		}
 		root.getParent().deleteChild(root.getChildIndex());
+		
+		// remove job from parent
 		if (parent != null) {
 			parent.children.remove(0);
+			parent.addInputSeq(seq);
 		}
-		else {
-			s.shuffle = null;
-		}		
 		
-		run (root.copyTree(), ctx, tuple);
+		// set inputs and run job
+		if (s.inputSeqs.size() > 0) {
+			s.shuffle.setProperty("inputSeqs", s.inputSeqs);
+		}
+		run (root.copyTree(), thisSeq, ctx, tuple);
+		return seq;
 	}
 	
-	private int run(AST root, QueryContext ctx, Tuple tuple) throws IOException, QueryException
+	private int run(AST root, int seq, QueryContext ctx, Tuple tuple) throws IOException, QueryException
 	{
 		XQueryJobConf jobConf = new XQueryJobConf(conf);
 		jobConf.setAst(root);
 		jobConf.setStaticContext(sctx);
+		jobConf.setSeqNumber(seq);
+		if (tuple != null) jobConf.setTuple(tuple);
 		jobConf.parseInputsAndOutputs();
-		if (tuple != null) jobConf.setTuple(tuple);		
 		XQueryJob job = new XQueryJob(jobConf);
 		
 		boolean status;
@@ -140,9 +150,14 @@ public final class HadoopExpr implements Expr {
 	private static class ShuffleTree {
 		AST shuffle;
 		ArrayList<ShuffleTree> children = new ArrayList<ShuffleTree>();
+		ArrayList<Integer> inputSeqs = new ArrayList<Integer>();
 
 		ShuffleTree(AST shuffle, ShuffleTree parent) {
 			this.shuffle = shuffle;
+		}
+		
+		void addInputSeq(int seq) {
+			inputSeqs.add(seq);
 		}
 		
 		static ShuffleTree build(AST node, ShuffleTree current)
