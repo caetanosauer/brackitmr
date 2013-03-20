@@ -73,8 +73,13 @@ public abstract class AbstractSerialization extends Configured {
 					extractTypesAndIndexes(node, 0);
 				}
 				else {
-					for (int i = 0; i < node.getChildCount(); i++) {
-						extractTypesAndIndexes(node.getParent(), i);
+					if (node.getChildCount() > 0) {
+						for (int i = 0; i < node.getChildCount(); i++) {
+							extractTypesAndIndexes(node.getParent(), i);
+						}
+					}
+					else {
+						extractTypesAndIndexes(node, 0);
 					}
 				}
 			}
@@ -109,7 +114,7 @@ public abstract class AbstractSerialization extends Configured {
 	{
 		StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
 		for (StackTraceElement ste : stackTrace) {
-			if (ste.getClassName().equals("org.apache.hadoop.mapred.MapTask$MapOutputBuffer")) {
+			if (ste.getClassName().equals("org.apache.hadoop.mapred.MapTask")) {
 				return true;
 			}
 		}

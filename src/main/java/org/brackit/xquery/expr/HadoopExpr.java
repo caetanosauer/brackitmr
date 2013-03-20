@@ -31,6 +31,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.brackit.hadoop.job.XQueryJob;
 import org.brackit.hadoop.job.XQueryJobConf;
 import org.brackit.xquery.ErrorCode;
@@ -42,6 +44,7 @@ import org.brackit.xquery.compiler.AST;
 import org.brackit.xquery.compiler.XQ;
 import org.brackit.xquery.compiler.XQExt;
 import org.brackit.xquery.module.StaticContext;
+import org.brackit.xquery.util.Cfg;
 import org.brackit.xquery.util.ExprUtil;
 import org.brackit.xquery.xdm.Expr;
 import org.brackit.xquery.xdm.Item;
@@ -49,6 +52,8 @@ import org.brackit.xquery.xdm.Sequence;
 
 public final class HadoopExpr implements Expr {
 
+	private static boolean DELETE_EXISTING = Cfg.asBool(XQueryJobConf.PROP_DELETE_EXISTING, false);
+	
 	private final Configuration conf;
 	private final AST ast;
 	private final StaticContext sctx;
@@ -116,6 +121,14 @@ public final class HadoopExpr implements Expr {
 		if (tuple != null) jobConf.setTuple(tuple);
 		jobConf.parseInputsAndOutputs();
 		XQueryJob job = new XQueryJob(jobConf);
+		
+		if (DELETE_EXISTING) {
+			Path outPath = new Path(jobConf.getOutputDir());
+			FileSystem fs = outPath.getFileSystem(jobConf);
+			if (fs.exists(outPath)) {
+				fs.delete(outPath, true);
+			}
+		}
 		
 		boolean status;
 		try {

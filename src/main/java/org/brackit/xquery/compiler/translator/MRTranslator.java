@@ -75,7 +75,7 @@ public class MRTranslator extends BottomUpTranslator {
 	@Override
 	protected Expr pipeExpr(AST node) throws QueryException
 	{
-		return new HadoopExpr(sctx, node, conf);
+		return new HadoopExpr(sctx, node.getLastChild(), conf);
 	}
 	
 	@Override

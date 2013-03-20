@@ -87,6 +87,7 @@ public class XQueryJobConf extends JobConf {
 	public static final String PROP_INPUT_PATHS = "org.brackit.hadoop.inputPaths";
 	public static final String PROP_MAPPER_SORT = "map.sort.class";
 	public static final String PROP_HASH_TABLE_SIZE = "org.brackit.hadoop.joinHashTableSize";
+	public static final String PROP_DELETE_EXISTING = "org.brackit.hadoop.deleteExisting";
 	
 	private static String OUTPUT_DIR = Cfg.asString(XQueryJobConf.PROP_OUTPUT_DIR, "./");
 	static {
@@ -314,7 +315,8 @@ public class XQueryJobConf extends JobConf {
 		if (getAst().getType() != XQ.End) {
 			jobOutput = jobOutput + "_temp_" + getSeqNumber();
 		}
-		return OUTPUT_DIR + jobOutput;
+		String path = OUTPUT_DIR + jobOutput;
+		return path;
 	}
 	
 	public static String objectToBase64(Serializable obj)
