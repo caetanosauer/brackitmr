@@ -27,13 +27,19 @@
  */
 package org.brackit.xquery.compiler.optimizer.walker;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Stack;
+
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.compiler.AST;
 import org.brackit.xquery.compiler.XQ;
 import org.brackit.xquery.compiler.XQExt;
+import org.brackit.xquery.xdm.type.SequenceType;
 
 public class ShuffleRewrite extends Walker {
 
+	private Stack<Integer> joinPosShifts = new Stack<Integer>();
 	
 	@Override
 	protected AST visit(AST node)
@@ -49,30 +55,90 @@ public class ShuffleRewrite extends Walker {
 		}
 		return node;
 	}
-
+	
+	private class PosShiftWalker extends Walker {
+		protected AST visit(AST node) {
+			if (node.getType() == XQ.Start && joinPosShifts.size() > 0) {
+				int shift = joinPosShifts.peek();
+				node.setProperty("shift", shift);
+			}
+			return node;
+		}
+	}
+	
 	private AST join(AST node)
 	{
-		AST phaseOut = createNode(node, XQExt.PhaseOut);
-		AST phaseIn = createNode(node, XQExt.PhaseIn);
-		AST shuffle = createNode(node, XQExt.Shuffle);
-		AST tagSplitter = createNode(node, XQExt.TagSplitter);
-		AST next = node.getLastChild();
+		if (node.checkProperty("tagSplit")) {
+			return node;
+		}
+		
+		AST left = node.getChild(0);
+		AST right = node.getChild(1);
 		AST parent = node.getParent();
 		
-		phaseOut.addChild(next);
-		shuffle.addChild(phaseOut);
+		if (left.getChild(0).getType() != XQ.VariableRef ||
+				right.getChild(0).getType() != XQ.VariableRef)
+		{
+			return node;
+		}
+		
+		node.deleteChild(node.getChildCount() - 1);
+		
+		AST phaseOutLeft = createNode(left, XQExt.PhaseOut);
+		AST phaseOutRight = createNode(right, XQExt.PhaseOut);
+		
+		{
+			AST shuffleSpecLeft = XQExt.createNode(XQExt.ShuffleSpec);
+			AST varRef = left.getChild(0).copy();
+			shuffleSpecLeft.addChild(varRef);
+			phaseOutLeft.addChild(shuffleSpecLeft);
+			phaseOutLeft.addChild(left.getLastChild());
+			ArrayList<Integer> keys = new ArrayList<Integer>();
+			keys.add((Integer) varRef.getProperty("pos"));
+			phaseOutLeft.setProperty("keyIndexes",	keys);
+			phaseOutLeft.setProperty("isJoin", true);
+			phaseOutLeft.setProperty("tag", 0);
+		}
+		{
+			AST shuffleSpecRight = XQExt.createNode(XQExt.ShuffleSpec);
+			AST varRef = right.getChild(0).copy();
+			shuffleSpecRight.addChild(varRef);
+			phaseOutRight.addChild(shuffleSpecRight);
+			phaseOutRight.addChild(right.getLastChild());
+			ArrayList<Integer> keys = new ArrayList<Integer>();
+			keys.add((Integer) varRef.getProperty("pos"));
+			phaseOutRight.setProperty("keyIndexes",	keys);
+			phaseOutRight.setProperty("isJoin", true);
+			phaseOutRight.setProperty("tag", 1);
+		}
+		
+		{
+			@SuppressWarnings("unchecked")
+			ArrayList<SequenceType> types = (ArrayList<SequenceType>) phaseOutLeft.getProperty("types");
+			joinPosShifts.push(types.size());
+			new PosShiftWalker().walk(phaseOutRight);
+			joinPosShifts.pop();
+		}		
+		
+		AST phaseIn = createMultiInputNode(XQExt.PhaseIn, phaseOutLeft, phaseOutRight);
+		AST shuffle = createMultiInputNode(XQExt.Shuffle, phaseOutLeft, phaseOutRight);
+		AST join = createMultiInputNode(XQExt.PostJoin, phaseOutLeft, phaseOutRight);
+		phaseIn.setProperty("isJoin", true);
+		shuffle.setProperty("isJoin", true);
+		
+		shuffle.addChild(phaseOutLeft);
+		shuffle.addChild(phaseOutRight);
 		phaseIn.addChild(shuffle);
-		tagSplitter.addChild(phaseIn);
-		parent.replaceChild(parent.getChildCount() - 1, tagSplitter);
+		join.addChild(phaseIn);
+		join.setProperty("tagSplit", true);
 		
-		
-		return shuffle;
+		parent.replaceChild(parent.getChildCount() - 1, join);		
+		return parent;
 	}
 
 	private AST groupBy(AST node)
 	{
-		if (node.getLastChild().getType() == XQExt.PhaseIn ||
-			node.getParent().getType() == XQExt.PhaseOut)
+		if (node.checkProperty("local"))
 		{
 			return node;
 		}
@@ -91,6 +157,8 @@ public class ShuffleRewrite extends Walker {
 
 		AST postGroup = node.copyTree();
 		AST preGroup = node.copyTree();
+		postGroup.setProperty("local", true);
+		preGroup.setProperty("local", true);
 		
 		int keyLen = 0;
 		for (int i = 0; i < postGroup.getChildCount(); i++) {
@@ -114,10 +182,10 @@ public class ShuffleRewrite extends Walker {
 			
 		}
 		
-		int[] keyIndexes = new int[keyLen];
+		ArrayList<Integer> keyIndexes = new ArrayList<Integer>(node.getChildCount());
 		for (int i = 0; i < keyLen; i++) {
 			Integer pos = (Integer) node.getChild(i).getChild(0).getProperty("pos");
-			keyIndexes[i] = pos;
+			keyIndexes.add(pos);
 		}
 		
 		phaseIn.setProperty("keyIndexes", keyIndexes);
@@ -173,6 +241,21 @@ public class ShuffleRewrite extends Walker {
 		result.setProperty("types", node.getProperty("types"));
 		return result;
 	}
+	
+	@SuppressWarnings("unchecked")
+	private AST createMultiInputNode(int type, AST ... nodes)
+	{
+		AST result = XQExt.createNode(type);
+		ArrayList<List<SequenceType>> typesMap = new ArrayList<List<SequenceType>>();
+		ArrayList<List<Integer>> keyIndexesMap = new ArrayList<List<Integer>>();
+		for (int i = 0; i < nodes.length; i++) {
+			typesMap.add((ArrayList<SequenceType>) nodes[i].getProperty("types"));
+			keyIndexesMap.add((ArrayList<Integer>) nodes[i].getProperty("keyIndexes"));
+		}
+		result.setProperty("typesMap", typesMap);
+		result.setProperty("keyIndexesMap", keyIndexesMap);
+		return result;
+	}
 
 	private AST orderBy(AST node)
 	{
@@ -189,15 +272,15 @@ public class ShuffleRewrite extends Walker {
 		AST parent = node.getParent();
 		
 		node.deleteChild(node.getChildCount() - 1);	
-		int[] keyIndexes = new int[node.getChildCount() ];
+		ArrayList<Integer> keyIndexes = new ArrayList<Integer>(node.getChildCount());
 		
 		// TODO add rule to extract order by key into variable
-		for (int i = 0; i < keyIndexes.length; i++) {
+		for (int i = 0; i < node.getChildCount(); i++) {
 			AST shuffleSpec = XQExt.createNode(XQExt.ShuffleSpec);
 			AST orderSpec = node.getChild(i);
 			AST varRef = orderSpec.getChild(0);
 			
-			keyIndexes[i] = (Integer) varRef.getProperty("pos");
+			keyIndexes.add((Integer) varRef.getProperty("pos"));
 			shuffleSpec.addChild(varRef);
 			
 			for (int j = 1; j < orderSpec.getChildCount(); j++) {

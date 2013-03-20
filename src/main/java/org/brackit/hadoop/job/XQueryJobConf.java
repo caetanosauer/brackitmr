@@ -86,6 +86,7 @@ public class XQueryJobConf extends JobConf {
 	public static final String PROP_INPUT_FORMATS = "org.brackit.hadoop.inputFormats";
 	public static final String PROP_INPUT_PATHS = "org.brackit.hadoop.inputPaths";
 	public static final String PROP_MAPPER_SORT = "map.sort.class";
+	public static final String PROP_HASH_TABLE_SIZE = "org.brackit.hadoop.joinHashTableSize";
 	
 	private static String OUTPUT_DIR = Cfg.asString(XQueryJobConf.PROP_OUTPUT_DIR, "./");
 	static {
@@ -195,7 +196,6 @@ public class XQueryJobConf extends JobConf {
 	public void parseInputsAndOutputs() throws IOException
 	{
 		AST node = getAst();
-		boolean isRoot = node.getType() == XQ.End;
 		while (node != null && node.getType() != XQExt.Shuffle && node.getType() != XQ.Start) {
 			node = node.getLastChild();
 		}
@@ -229,11 +229,7 @@ public class XQueryJobConf extends JobConf {
 			parseForBind(node.getParent());
 		}
 		
-		String jobOutput = getJobName();
-		if (!isRoot) {
-			jobOutput = jobOutput + "_temp_" + getSeqNumber();
-		}
-		FileOutputFormat.setOutputPath(this, new Path(OUTPUT_DIR + jobOutput));
+		FileOutputFormat.setOutputPath(this, new Path(getOutputDir()));
 		
 		setStrings("io.serializations",
 				"org.brackit.hadoop.io.TupleSerialization",
@@ -310,6 +306,15 @@ public class XQueryJobConf extends JobConf {
 	{
 		String paths = get(PROP_INPUT_PATHS);
 		return paths == null ? null : paths.split(",");
+	}
+	
+	public String getOutputDir()
+	{
+		String jobOutput = getJobName();
+		if (getAst().getType() != XQ.End) {
+			jobOutput = jobOutput + "_temp_" + getSeqNumber();
+		}
+		return OUTPUT_DIR + jobOutput;
 	}
 	
 	public static String objectToBase64(Serializable obj)

@@ -40,7 +40,7 @@ public abstract class AbstractSerialization extends Configured {
 
 	protected boolean isMultiMap = false;
 	protected List<SequenceType>[] types;
-	protected int[][] keyIndexes;
+	protected List<Integer>[] keyIndexes;
 	
 	@SuppressWarnings("unchecked")
 	protected void walkAst(AST node, boolean reading)
@@ -58,7 +58,7 @@ public abstract class AbstractSerialization extends Configured {
 			int len = node.getChildCount();
 			if (len == 0) len = 1;			
 			types = new List[len];
-			keyIndexes = new int[len][];
+			keyIndexes = new List[len];
 			
 			// we need to know the types of the tuples being read/written
 			// if we are reading, the task must be either an id-mapper or any kind of reducer
@@ -73,7 +73,9 @@ public abstract class AbstractSerialization extends Configured {
 					extractTypesAndIndexes(node, 0);
 				}
 				else {
-					extractTypesAndIndexes(node.getParent(), 0);
+					for (int i = 0; i < node.getChildCount(); i++) {
+						extractTypesAndIndexes(node.getParent(), i);
+					}
 				}
 			}
 			else {
@@ -119,7 +121,6 @@ public abstract class AbstractSerialization extends Configured {
 		if (types == null) {
 			return null;
 		}
-		
 		return types[tag];
 	}
 	
@@ -127,7 +128,26 @@ public abstract class AbstractSerialization extends Configured {
 	private void extractTypesAndIndexes(AST node, int pos)
 	{
 		types[pos] = (ArrayList<SequenceType>) node.getProperty("types");
-		keyIndexes[pos] = (int[]) node.getProperty("keyIndexes");
+		keyIndexes[pos] = (ArrayList<Integer>) node.getProperty("keyIndexes");
+
+		if (keyIndexes[pos] == null) {
+			List<List<Integer>> keyIndexesMap = (List<List<Integer>>) node.getProperty("keyIndexesMap");
+			keyIndexes[pos] = keyIndexesMap.get(pos);
+		}
+		
+		if (types[pos] == null) {
+			List<List<SequenceType>> typesMap = (List<List<SequenceType>>) node.getProperty("typesMap");
+			types[pos] = typesMap.get(pos);
+		}
+	}
+	
+	protected int[] intArray(List<Integer> list)
+	{
+		int[] result = new int[list.size()];
+		for (int i = 0; i < result.length; i++) {
+			result[i] = list.get(i);
+		}
+		return result;
 	}
 
 }

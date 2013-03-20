@@ -73,14 +73,14 @@ public class KeySerialization extends AbstractSerialization implements Serializa
 				Atomic[] keys = t.getKeys();
 
 				int len = isMultiMap ? (keys.length - 1) : keys.length;
-				int tag = isMultiMap ? ((Int32) keys[len - 1]).v : 0;
+				int tag = isMultiMap ? ((Int32) keys[len]).v : 0;
 				List<SequenceType> types = getTypes(tag);
 
 				if (isMultiMap) {
 					out.writeByte(tag);
 				}
 				for (int i = 0; i < len; i++) {
-					Type type = ((AtomicType) types.get(keyIndexes[tag][i]).getItemType()).getType();
+					Type type = ((AtomicType) types.get(keyIndexes[tag].get(i)).getItemType()).getType();
 					out.writeAtomic(keys[i], type);
 				}
 			}
@@ -113,14 +113,14 @@ public class KeySerialization extends AbstractSerialization implements Serializa
 			try {
 				int tag = isMultiMap ? in.readByte() : 0;
 				List<SequenceType> types = getTypes(tag);
-				Atomic[] keys = new Atomic[keyIndexes[tag].length];
+				Atomic[] keys = new Atomic[keyIndexes[tag].size()];
 
 				for (int i = 0; i < keys.length; i++) {
-					Type type = ((AtomicType) types.get(keyIndexes[tag][i]).getItemType()).getType();
+					Type type = ((AtomicType) types.get(keyIndexes[tag].get(i)).getItemType()).getType();
 					keys[i] = in.readAtomic(type);
 				}
 				
-				return new XQGroupingKey(keys, keyIndexes[tag]);
+				return new XQGroupingKey(keys, intArray(keyIndexes[tag]));
 			}
 			catch (QueryException e) {
 				throw new IOException(e);

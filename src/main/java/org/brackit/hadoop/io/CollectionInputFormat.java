@@ -31,11 +31,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.brackit.hadoop.job.XQueryJobConf;
 
@@ -55,10 +58,27 @@ public class CollectionInputFormat<K, V> extends InputFormat<K, V> {
 		XQueryJobConf conf = new XQueryJobConf(context.getConfiguration());
 		
 		List<Class<? extends InputFormat<?, ?>>> formats = conf.getInputFormats();
+		String[] paths = null;
+		int pathIndex = 0;
 		for (int i = 0; i < formats.size(); i++) {
 			InputFormat<?,?> format = ReflectionUtils.newInstance(formats.get(i), context.getConfiguration());
-			for (InputSplit split : format.getSplits(context)) {
-				result.add(new CollectionInputSplit(split, formats.get(i), i, context.getConfiguration()));
+			if (FileInputFormat.class.isAssignableFrom(formats.get(i))) {
+				// workaround for static paths on FileInputFormat
+				if (paths == null) {
+					paths = conf.getInputPaths();
+				}
+				// look for splits of file in paths[pathIndex] only 
+				for (InputSplit split : format.getSplits(context)) {
+					if (((FileSplit) split).getPath().equals(new Path("file://" + paths[pathIndex]))) {
+						result.add(new CollectionInputSplit(split, formats.get(i), i, conf));
+					}
+				}
+				pathIndex++;
+			}
+			else {
+				for (InputSplit split : format.getSplits(context)) {
+					result.add(new CollectionInputSplit(split, formats.get(i), i, context.getConfiguration()));
+				}
 			}
 		}
 		

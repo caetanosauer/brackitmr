@@ -100,15 +100,15 @@ public class TupleSerialization extends AbstractSerialization implements Seriali
 					width--;
 				}
 				
-				List<SequenceType> types = getTypes(0);
+				List<SequenceType> types = getTypes(tag);
 				if (types.size() != width) {
 					throw new IOException("Length of tuple to be serialized is invalid");
 				}
 				
 				for (int i = 0; i < width; i++) {
 					boolean isKey = false;
-					for (int j = 0; j < keyIndexes.length; j++) {
-						if (keyIndexes[tag][j] == i) {
+					for (int j = 0; j < keyIndexes[tag].size(); j++) {
+						if (keyIndexes[tag].get(j) == i) {
 							isKey = true;
 							break;
 						}
@@ -148,16 +148,19 @@ public class TupleSerialization extends AbstractSerialization implements Seriali
 				int tag = isMultiMap ? in.readByte() : 0;				
 				List<SequenceType> types = getTypes(tag);
 				
-				Sequence[] seqs = new Sequence[types.size()];
+				Sequence[] seqs = new Sequence[types.size() + (isMultiMap ? 1: 0)];
 				for (int i = 0; i < types.size(); i++) {
 					boolean isKey = false;
-					for (int j = 0; j < keyIndexes.length; j++) {
-						if (keyIndexes[tag][j] == i) {
+					for (int j = 0; j < keyIndexes[tag].size(); j++) {
+						if (keyIndexes[tag].get(j) == i) {
 							isKey = true;
 							break;
 						}
 					}
 					seqs[i] = isKey? null : in.readSequence(types.get(i));
+				}
+				if (isMultiMap) {
+					seqs[seqs.length - 1] = new Int32(tag);
 				}
 				
 				return new TupleImpl(seqs);

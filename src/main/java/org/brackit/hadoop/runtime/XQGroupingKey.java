@@ -31,6 +31,7 @@ import org.brackit.xquery.ErrorCode;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.Tuple;
 import org.brackit.xquery.atomic.Atomic;
+import org.brackit.xquery.atomic.Int32;
 import org.brackit.xquery.xdm.Iter;
 import org.brackit.xquery.xdm.Sequence;
 
@@ -45,9 +46,9 @@ public class XQGroupingKey implements Comparable<XQGroupingKey> {
 		this.indexes = indexes;
 	}
 	
-	public XQGroupingKey(Tuple tuple, boolean isJoin, int ... indexes) throws QueryException
+	public XQGroupingKey(Tuple tuple, boolean isJoin, int tag, int ... indexes) throws QueryException
 	{
-		this.keys = new Atomic[indexes.length];
+		this.keys = new Atomic[indexes.length + (isJoin ? 1 : 0)];
 		this.indexes = indexes;
 		
 		int j = 0;
@@ -66,6 +67,9 @@ public class XQGroupingKey implements Comparable<XQGroupingKey> {
 			if (!isJoin || i != tuple.getSize() - 1) { // TODO join hack
 				tuple.array()[i] = null;
 			}
+		}
+		if (isJoin) {
+			keys[keys.length - 1] = new Int32(tag);
 		}
 	}
 	
@@ -173,24 +177,14 @@ public class XQGroupingKey implements Comparable<XQGroupingKey> {
 
 	public void rebuildTuple(Tuple tuple) throws QueryException
 	{
-		rebuildTuple(tuple, false);
-	}
-	
-	public void rebuildTuple(Tuple tuple, boolean isJoin) throws QueryException
-	{
 		Sequence[] seqs = tuple.array();
-		int max = 0;
 		if (indexes != null) {
-			max = indexes.length;
-			if (isJoin) max--;
-			for (int i = 0; i < max; i++) {
+			for (int i = 0; i < indexes.length; i++) {
 				seqs[indexes[i]] = keys[i];
 			}
 		}
 		else {
-			max = seqs.length;
-			if (isJoin) max--;
-			for (int i = 0, j = 0; i < max; i++) {
+			for (int i = 0, j = 0; i < seqs.length; i++) {
 				if (seqs[i] == null) {
 					seqs[i] = keys[j++];
 				}

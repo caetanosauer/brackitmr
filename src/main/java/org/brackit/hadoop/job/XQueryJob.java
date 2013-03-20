@@ -39,6 +39,8 @@ import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.brackit.hadoop.io.CollectionInputFormat;
 import org.brackit.hadoop.runtime.XQGroupingKey;
+import org.brackit.hadoop.runtime.XQJoinKeyComparator;
+import org.brackit.hadoop.runtime.XQJoinKeyPartitioner;
 import org.brackit.hadoop.runtime.XQRawKeyComparator;
 import org.brackit.hadoop.runtime.XQTask;
 import org.brackit.xquery.compiler.AST;
@@ -52,6 +54,7 @@ public class XQueryJob extends Job {
 	private boolean isLeaf = false;
 	private boolean isRoot = false;
 	private boolean hasShuffle = false;
+	private boolean isJoin = false;
 	
 	private static int NUM_REDUCERS = Cfg.asInt(XQueryJobConf.PROP_NUM_REDUCERS, 10);
 	
@@ -71,8 +74,9 @@ public class XQueryJob extends Job {
 		if (hasShuffle) {
 			setMapOutputKeyClass(XQGroupingKey.class);
 			setMapOutputValueClass(TupleImpl.class);
-			setGroupingComparatorClass(XQRawKeyComparator.class);
-			setSortComparatorClass(XQRawKeyComparator.class);
+			setGroupingComparatorClass(isJoin ? XQJoinKeyComparator.class : XQRawKeyComparator.class);
+			setSortComparatorClass(isJoin ? XQJoinKeyComparator.class : XQRawKeyComparator.class);
+			if (isJoin) setPartitionerClass(XQJoinKeyPartitioner.class);
 		}
 	}
 	
@@ -89,6 +93,7 @@ public class XQueryJob extends Job {
 		}
 		if (node.getType() == XQExt.Shuffle) {
 			hasShuffle = true;
+			isJoin = node.checkProperty("isJoin");
 			for (int i = 0; i < node.getChildCount(); i++) {
 				walkAst(node.getChild(i));
 			}

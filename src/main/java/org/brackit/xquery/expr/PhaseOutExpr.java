@@ -10,6 +10,7 @@ import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.Tuple;
 import org.brackit.xquery.atomic.Bool;
+import org.brackit.xquery.atomic.Int32;
 import org.brackit.xquery.operator.Cursor;
 import org.brackit.xquery.operator.Operator;
 import org.brackit.xquery.util.ExprUtil;
@@ -22,12 +23,14 @@ public class PhaseOutExpr implements Expr {
 	private final Operator in;
 	private final int[] keyIndexes;
 	private final boolean isJoin;
+	private final Int32 tag;
 	
-	public PhaseOutExpr(Operator in, int[] keyIndexes, boolean isJoin)
+	public PhaseOutExpr(Operator in, int[] keyIndexes, boolean isJoin, int tag)
 	{
 		this.in = in;
 		this.keyIndexes = keyIndexes;
 		this.isJoin = isJoin;
+		this.tag = new Int32(tag);
 	}
 	
 	public Sequence evaluate(QueryContext ctx, Tuple tuple)
@@ -44,7 +47,10 @@ public class PhaseOutExpr implements Expr {
 		try {
 			Tuple t = c.next(hctx);
 			while (t != null) {
-				context.write(new XQGroupingKey(t, isJoin, keyIndexes), t);
+				if (isJoin) {
+					t = t.concat(tag);
+				}
+				context.write(new XQGroupingKey(t, isJoin, tag.v, keyIndexes), t);
 				t = c.next(hctx);
 			}
 		}

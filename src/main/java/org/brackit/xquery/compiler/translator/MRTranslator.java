@@ -43,7 +43,11 @@ import org.brackit.xquery.expr.HadoopExpr;
 import org.brackit.xquery.expr.PhaseOutExpr;
 import org.brackit.xquery.operator.Operator;
 import org.brackit.xquery.operator.PhaseIn;
+import org.brackit.xquery.operator.Start;
+import org.brackit.xquery.operator.HashPostJoin;
+import org.brackit.xquery.operator.TupleImpl;
 import org.brackit.xquery.xdm.Expr;
+import org.brackit.xquery.xdm.Sequence;
 import org.brackit.xquery.xdm.type.SequenceType;
 
 public class MRTranslator extends BottomUpTranslator {
@@ -80,10 +84,28 @@ public class MRTranslator extends BottomUpTranslator {
 		if (node.getType() == XQExt.PhaseIn) {
 			return phaseIn(node);
 		}
-		else if (node.getType() == XQExt.TagSplitter) {
-			return tagSplitter(node);
+		else if (node.getType() == XQExt.PostJoin) {
+			return postJoin(node);
+		}
+		if (node.getType() == XQ.Start) {
+			return start(node);
 		}
 		return super.anyOp(node);
+	}
+	
+	private Operator start(AST node) throws QueryException
+	{
+		if (node.getChildCount() == 0) {
+			Integer shift = (Integer) node.getProperty("shift");
+			if (shift != null) {
+				return new Start(new TupleImpl(new Sequence[shift]));
+			}
+			else {
+				return new Start();
+			}
+		} else {
+			return anyOp(node.getLastChild());
+		}
 	}
 	
 	protected Expr phaseOut(AST node) throws QueryException
@@ -103,7 +125,10 @@ public class MRTranslator extends BottomUpTranslator {
 			}
 			indexes[i] = pos;
 		}
-		return new PhaseOutExpr(anyOp(node.getLastChild()), indexes, node.checkProperty("isJoin"));
+		Integer tag = (Integer) node.getProperty("tag");
+		if (tag == null) tag = 0;
+		
+		return new PhaseOutExpr(anyOp(node.getLastChild()), indexes, node.checkProperty("isJoin"), tag);
 	}
 	
 	protected Expr end(AST node) throws QueryException
@@ -115,16 +140,31 @@ public class MRTranslator extends BottomUpTranslator {
 	{
 		@SuppressWarnings("unchecked")
 		List<SequenceType> types = (List<SequenceType>) node.getProperty("types");
+		int size = 0;
 		if (types == null) {
-			throw new QueryException(ErrorCode.BIT_DYN_RT_ILLEGAL_ARGUMENTS_ERROR, 
-					"MR translation requires type-annotated query plans"); 
+			@SuppressWarnings("unchecked")
+			List<List<SequenceType>> typesMap = (List<List<SequenceType>>) node.getProperty("typesMap");
+			if (typesMap == null) {
+				throw new QueryException(ErrorCode.BIT_DYN_RT_ILLEGAL_ARGUMENTS_ERROR, 
+						"MR translation requires type-annotated query plans");
+			}
+			for(List<SequenceType> l : typesMap) {
+				size += l.size();
+			} 
 		}
-		return new PhaseIn(types.size(), node.checkProperty("isJoin"));
+		else {
+			size = types.size();
+		}
+		return new PhaseIn(size);
 	}
 	
-	protected Operator tagSplitter(AST node) throws QueryException
+	protected Operator postJoin(AST node) throws QueryException
 	{
-		return null;
+		Operator in = anyOp(node.getChild(0));
+		@SuppressWarnings("unchecked")
+		List<List<Integer>> keyIndexes = (List<List<Integer>>) node.getProperty("keyIndexesMap");
+		// TODO: composed join keys?
+		return new HashPostJoin(in, keyIndexes.get(0).get(0), keyIndexes.get(1).get(0));
 	}
 
 }

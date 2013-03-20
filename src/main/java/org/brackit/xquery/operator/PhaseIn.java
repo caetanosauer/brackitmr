@@ -11,12 +11,10 @@ import org.brackit.xquery.Tuple;
 public class PhaseIn implements Operator {
 
 	private final int width;
-	private final boolean isJoin;
 	
-	public PhaseIn(int width, boolean isJoin)
+	public PhaseIn(int width)
 	{
 		this.width = width;
-		this.isJoin = isJoin;
 	}
 	
 	private class PhaseInCursor implements Cursor {
@@ -36,7 +34,7 @@ public class PhaseIn implements Operator {
 				}
 				XQGroupingKey key = (XQGroupingKey) context.getCurrentKey();
 				Tuple value = (Tuple) context.getCurrentValue();
-				key.rebuildTuple(value, isJoin);
+				key.rebuildTuple(value);
 				return value;
 			}
 			catch (Exception e) {

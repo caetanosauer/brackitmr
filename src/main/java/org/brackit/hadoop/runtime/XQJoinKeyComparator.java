@@ -37,23 +37,32 @@ public class XQJoinKeyComparator implements RawComparator<XQGroupingKey> {
 		return a.joinCompareTo(b);
 	}
 
+//	public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2)
+//	{
+//		// ignore join tag
+//		l1--;
+//		l2--;		
+//		
+//		int length = l1 < l2 ? l1 : l2;
+//		for (int i = 0; i < length; i++)
+//		{
+//			// anding with 0xff ignores the signal
+//			int x = (b1[s1 + i] & 0xff);
+//			int y = (b2[s2 + i] & 0xff);
+//			if (x != y) {
+//				return x - y;
+//			}
+//		}
+//		return l1 - l2;
+//	}
+	
 	public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2)
 	{
-		// ignore join tag
-		l1--;
-		l2--;		
-		
-		int length = l1 < l2 ? l1 : l2;
-		for (int i = 0; i < length; i++)
-		{
-			// anding with 0xff ignores the signal
-			int x = (b1[s1 + i] & 0xff);
-			int y = (b2[s2 + i] & 0xff);
-			if (x != y) {
-				return x - y;
-			}
-		}
-		return l1 - l2;
+		// compare based only on join tag
+		// anding with 0xff ignores the signal
+		int x = (b1[l1 - 1] & 0xff);
+		int y = (b2[l2 - 1] & 0xff);
+		return y - x;
 	}
 	
 	

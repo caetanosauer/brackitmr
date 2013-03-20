@@ -34,7 +34,6 @@ public class XQJoinKeyPartitioner extends Partitioner<XQGroupingKey, Tuple> {
 
 	public int getPartition(XQGroupingKey key, Tuple value, int numPartitions)
 	{
-		// a tuple emitted by a pre-join phase always has join key and join tag as last fields
 		int result = (key.joinHashCode() & Integer.MAX_VALUE) % numPartitions;
 		return result;
 	}

@@ -35,14 +35,14 @@ public class XQExt {
 	public static final int ShuffleSpec = OFFSET + 1;
 	public static final int PhaseIn = OFFSET + 2;
 	public static final int PhaseOut = OFFSET + 3;
-	public static final int TagSplitter = OFFSET + 4;
+	public static final int PostJoin = OFFSET + 4;
 
 	public static final String NAMES[] = new String[] {
 		"Shuffle",
 		"ShuffleSpec",
 		"PhaseIn",
 		"PhaseOut",
-		"TagSplitter"
+		"PostJoin"
 	};
 
 	public static final AST createNode(int key)
