@@ -25,51 +25,58 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.xquery.compiler.optimizer;
+package org.brackit.hadoop.util;
 
-import java.util.Map;
+import java.io.IOException;
+import java.io.PrintStream;
 
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.SequenceFile.Reader;
+import org.brackit.hadoop.job.XQueryJobConf;
+import org.brackit.hadoop.runtime.XQGroupingKey;
 import org.brackit.xquery.QueryException;
-import org.brackit.xquery.atomic.QNm;
-import org.brackit.xquery.atomic.Str;
-import org.brackit.xquery.compiler.AST;
-import org.brackit.xquery.compiler.optimizer.walker.ReplaceAvgFunction;
-import org.brackit.xquery.compiler.optimizer.walker.ShuffleRewrite;
-import org.brackit.xquery.module.StaticContext;
+import org.brackit.xquery.operator.TupleImpl;
+import org.brackit.xquery.util.csv.CSVSerializer;
+import org.brackit.xquery.util.serialize.Serializer;
+import org.brackit.xquery.xdm.Sequence;
 
-public class MROptimizer extends TopDownOptimizer {
+public class SequenceFileInspector {
 
-	public MROptimizer(Map<QNm, Str> options)
+	private final String path;
+	private final PrintStream out;
+	private final XQueryJobConf conf;
+	
+	public SequenceFileInspector(String path, PrintStream out, XQueryJobConf conf)
 	{
-		super(options);
-		for (int i = 0; i < stages.size(); i++) {
-			if (stages.get(i).getClass() == Simplification.class) {
-				stages.add(i + 1, new MRSimplification());
+		this.path = path;
+		this.out = out;
+		this.conf = conf;
+	}
+	
+	public void run() throws IOException, QueryException
+	{
+		Path fsPath = new Path(path);
+		FileSystem fs = fsPath.getFileSystem(conf);
+		Reader reader = new Reader(fs, fsPath, conf);
+		XQGroupingKey key = null;
+		TupleImpl value = null;
+		Serializer ser = new CSVSerializer(out, '|', false, true);
+		
+		key = (XQGroupingKey) reader.next(key);
+		while (key != null) {
+			out.print("key = " + key.toString() + "]\t\tvalue =[");
+			value = (TupleImpl) reader.getCurrentValue(value);
+			Sequence[] seqs = value.array();
+			for (int i = 0; i < seqs.length - 1; i++) {
+				ser.serialize(seqs[i]);
+				out.print("; ");
 			}
-		}
-		stages.add(new MRRewrite());
-	}
-	
-	
-	private class MRRewrite implements Stage {
-
-		public AST rewrite(StaticContext sctx, AST ast) throws QueryException
-		{
-			ast = new ShuffleRewrite().walk(ast);
-			return ast;
+			ser.serialize(seqs[seqs.length - 1]);
+			out.println("]");
 		}
 		
+		reader.close();
 	}
-	
-	private class MRSimplification implements Stage {
-
-		@Override
-		public AST rewrite(StaticContext sctx, AST ast) throws QueryException {
-			ast = new ReplaceAvgFunction().walk(ast);
-			return ast;
-		}
-		
-	}
-
 
 }

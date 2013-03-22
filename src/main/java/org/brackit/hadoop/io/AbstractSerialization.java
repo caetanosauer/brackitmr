@@ -51,10 +51,6 @@ public abstract class AbstractSerialization extends Configured {
 		}
 		
 		if (node.getType() == XQExt.Shuffle) {
-			if (node.getChildCount() > 1) {
-				isMultiMap = true;
-			}
-			
 			int len = node.getChildCount();
 			if (len == 0) len = 1;			
 			types = new List[len];
@@ -132,6 +128,9 @@ public abstract class AbstractSerialization extends Configured {
 	@SuppressWarnings("unchecked")
 	private void extractTypesAndIndexes(AST node, int pos)
 	{
+		if (pos == 1) {
+			isMultiMap = true;
+		}
 		types[pos] = (ArrayList<SequenceType>) node.getProperty("types");
 		keyIndexes[pos] = (ArrayList<Integer>) node.getProperty("keyIndexes");
 

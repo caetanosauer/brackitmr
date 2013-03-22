@@ -28,7 +28,6 @@
 package org.brackit.xquery.compiler.optimizer.walker;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Stack;
 
 import org.brackit.xquery.atomic.QNm;
@@ -122,7 +121,8 @@ public class ShuffleRewrite extends Walker {
 		
 		AST phaseIn = createMultiInputNode(XQExt.PhaseIn, phaseOutLeft, phaseOutRight);
 		AST shuffle = createMultiInputNode(XQExt.Shuffle, phaseOutLeft, phaseOutRight);
-		AST join = createMultiInputNode(XQExt.PostJoin, phaseOutLeft, phaseOutRight);
+		AST join = createNode(node, XQExt.PostJoin);
+		join.setProperty("keyIndexesMap", shuffle.getProperty("keyIndexesMap"));
 		phaseIn.setProperty("isJoin", true);
 		shuffle.setProperty("isJoin", true);
 		
@@ -169,14 +169,25 @@ public class ShuffleRewrite extends Walker {
 				phaseOut.addChild(shuffleSpec);
 				keyLen++;
 			}
-			else if (spec.getType() == XQ.AggregateSpec && spec.getChildCount() > 1) {
-				AST aggBind = spec.getChild(1);
-				if (aggBind.getType() == XQ.AggregateBinding) {
-					if (aggBind.getChild(1).getType() == XQ.CountAgg) {
-						aggBind.replaceChild(1, new AST(XQ.SumAgg));
+			else if (spec.getType() == XQ.AggregateSpec && spec.getChildCount() > 1) {			
+				for (int j = 1; j < spec.getChildCount(); j++) {
+					AST aggBind = spec.getChild(j);
+					if (aggBind.getType() == XQ.AggregateBinding) {
+						if (j == 1) {
+							postGroup.deleteChild(i);
+						}
+						AST agg = aggBind.getChild(1);
+						if (agg.getType() == XQ.CountAgg) {
+							agg = new AST(XQ.SumAgg);
+						}
+						QNm var = (QNm) aggBind.getChild(0).getChild(0).getValue();
+						AST varRef = new AST(XQ.VariableRef, var);
+						varRef.setProperty("pos", findPos(var, node));
+						AST newSpec = new AST(XQ.AggregateSpec);
+						newSpec.addChild(varRef);
+						newSpec.addChild(agg);
+						postGroup.insertChild(i, newSpec);
 					}
-					// TODO shouldnt we replace the VariableRef name with the one under Variable??
-					spec.replaceChild(1, aggBind.getChild(1));
 				}
 			}
 			
@@ -235,6 +246,32 @@ public class ShuffleRewrite extends Walker {
 		return parent;
 	}
 	
+	// TODO we could get rid of this ugly trick by using a RefScopeWalker
+	private int findPos(final QNm var, AST node)
+	{
+		AST end = node;
+		while (end.getType() != XQ.End) {
+			end = end.getParent();
+		}
+
+		final int[] pos = new int[] { -1 };
+		Walker walker = new Walker() {
+			@Override
+			protected AST visit(AST node) {
+				if (node.getType() == XQ.VariableRef) {
+					if (pos[0] == -1 && var.atomicCmp((QNm) node.getValue()) == 0) {
+						pos[0] = (Integer) node.getProperty("pos");
+					}
+				}
+				return node;
+			}
+		};
+		
+		walker.walk(end);
+		
+		return pos[0];
+	}
+
 	private AST createNode(AST node, int type)
 	{
 		AST result = XQExt.createNode(type);
@@ -246,8 +283,8 @@ public class ShuffleRewrite extends Walker {
 	private AST createMultiInputNode(int type, AST ... nodes)
 	{
 		AST result = XQExt.createNode(type);
-		ArrayList<List<SequenceType>> typesMap = new ArrayList<List<SequenceType>>();
-		ArrayList<List<Integer>> keyIndexesMap = new ArrayList<List<Integer>>();
+		ArrayList<ArrayList<SequenceType>> typesMap = new ArrayList<ArrayList<SequenceType>>();
+		ArrayList<ArrayList<Integer>> keyIndexesMap = new ArrayList<ArrayList<Integer>>();
 		for (int i = 0; i < nodes.length; i++) {
 			typesMap.add((ArrayList<SequenceType>) nodes[i].getProperty("types"));
 			keyIndexesMap.add((ArrayList<Integer>) nodes[i].getProperty("keyIndexes"));

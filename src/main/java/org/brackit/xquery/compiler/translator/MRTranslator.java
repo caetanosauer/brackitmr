@@ -148,9 +148,7 @@ public class MRTranslator extends BottomUpTranslator {
 				throw new QueryException(ErrorCode.BIT_DYN_RT_ILLEGAL_ARGUMENTS_ERROR, 
 						"MR translation requires type-annotated query plans");
 			}
-			for(List<SequenceType> l : typesMap) {
-				size += l.size();
-			} 
+			size = typesMap.get(typesMap.size() - 1).size();
 		}
 		else {
 			size = types.size();

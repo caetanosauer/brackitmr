@@ -1,6 +1,6 @@
 /*
  * [New BSD License]
- * Copyright (c) 2011-2013, Brackit Project Team <info@brackit.org>  
+ * Copyright (c) 2011-2012, Brackit Project Team <info@brackit.org>  
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -25,51 +25,42 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.xquery.compiler.optimizer;
+package org.brackit.xquery.compiler.optimizer.walker;
 
-import java.util.Map;
-
-import org.brackit.xquery.QueryException;
 import org.brackit.xquery.atomic.QNm;
-import org.brackit.xquery.atomic.Str;
 import org.brackit.xquery.compiler.AST;
-import org.brackit.xquery.compiler.optimizer.walker.ReplaceAvgFunction;
-import org.brackit.xquery.compiler.optimizer.walker.ShuffleRewrite;
-import org.brackit.xquery.module.StaticContext;
+import org.brackit.xquery.compiler.XQ;
+import org.brackit.xquery.module.Namespaces;
 
-public class MROptimizer extends TopDownOptimizer {
+public class ReplaceAvgFunction extends Walker {
 
-	public MROptimizer(Map<QNm, Str> options)
+	@Override
+	protected AST visit(AST node)
 	{
-		super(options);
-		for (int i = 0; i < stages.size(); i++) {
-			if (stages.get(i).getClass() == Simplification.class) {
-				stages.add(i + 1, new MRSimplification());
-			}
+		if (node.getType() == XQ.FunctionCall) {
+			return functionCall(node);
 		}
-		stages.add(new MRRewrite());
-	}
-	
-	
-	private class MRRewrite implements Stage {
-
-		public AST rewrite(StaticContext sctx, AST ast) throws QueryException
-		{
-			ast = new ShuffleRewrite().walk(ast);
-			return ast;
-		}
-		
-	}
-	
-	private class MRSimplification implements Stage {
-
-		@Override
-		public AST rewrite(StaticContext sctx, AST ast) throws QueryException {
-			ast = new ReplaceAvgFunction().walk(ast);
-			return ast;
-		}
-		
+		return node;
 	}
 
-
+	private AST functionCall(AST node)
+	{
+		QNm avg = new QNm(Namespaces.FN_NSURI, Namespaces.FN_PREFIX, "avg");
+		QNm sum = new QNm(Namespaces.FN_NSURI, Namespaces.FN_PREFIX, "sum");
+		QNm count = new QNm(Namespaces.FN_NSURI, Namespaces.FN_PREFIX, "count");
+		if (avg.atomicCmp((QNm) node.getValue()) == 0) {
+			AST div = new AST(XQ.ArithmeticExpr);
+			div.addChild(new AST(XQ.DivideOp));
+			AST left = new AST(XQ.FunctionCall, sum);
+			left.addChild(node.getChild(0).copyTree());
+			AST right = new AST(XQ.FunctionCall, count);
+			right.addChild(node.getChild(0).copyTree());
+			div.addChild(left);
+			div.addChild(right);
+			node.getParent().replaceChild(node.getChildIndex(), div);
+			return div;
+		}
+		return node;
+	}
+	
 }

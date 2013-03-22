@@ -221,9 +221,9 @@ public class XQueryJobConf extends JobConf {
 					}
 					parseForBind(start.getParent());
 				}
-				if (node.checkProperty("skipSort")) {
-					setDummySort();
-				}
+			}
+			if (node.checkProperty("skipSort")) {
+				setDummySort();
 			}
 		}
 		else {

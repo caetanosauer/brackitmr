@@ -46,11 +46,13 @@ public class PhaseOutExpr implements Expr {
 		
 		try {
 			Tuple t = c.next(hctx);
+			XQGroupingKey key = null;
 			while (t != null) {
 				if (isJoin) {
 					t = t.concat(tag);
 				}
-				context.write(new XQGroupingKey(t, isJoin, tag.v, keyIndexes), t);
+				key = new XQGroupingKey(t, isJoin, tag.v, keyIndexes);
+				context.write(key, t);
 				t = c.next(hctx);
 			}
 		}
