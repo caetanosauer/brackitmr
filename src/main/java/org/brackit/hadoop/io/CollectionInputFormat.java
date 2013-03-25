@@ -69,7 +69,8 @@ public class CollectionInputFormat<K, V> extends InputFormat<K, V> {
 				}
 				// look for splits of file in paths[pathIndex] only 
 				for (InputSplit split : format.getSplits(context)) {
-					if (((FileSplit) split).getPath().equals(new Path("file://" + paths[pathIndex]))) {
+					String pathStr = new Path(paths[pathIndex]).toUri().getPath();
+					if (((FileSplit) split).getPath().toUri().getPath().equals(pathStr)) {
 						result.add(new CollectionInputSplit(split, formats.get(i), i, conf));
 					}
 				}

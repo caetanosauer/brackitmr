@@ -85,13 +85,19 @@ public class XQueryJobConf extends JobConf {
 	public static final String PROP_OUTPUT_DIR = "org.brackit.hadoop.outputDir";
 	public static final String PROP_INPUT_FORMATS = "org.brackit.hadoop.inputFormats";
 	public static final String PROP_INPUT_PATHS = "org.brackit.hadoop.inputPaths";
-	public static final String PROP_MAPPER_SORT = "map.sort.class";
 	public static final String PROP_HASH_TABLE_SIZE = "org.brackit.hadoop.joinHashTableSize";
 	public static final String PROP_DELETE_EXISTING = "org.brackit.hadoop.deleteExisting";
+	public static final String PROP_SKIP_HADOOP_SORT = "org.brackit.hadoop.skipHadoopSort";
 	
-	private static String OUTPUT_DIR = Cfg.asString(XQueryJobConf.PROP_OUTPUT_DIR, "./");
+	public static final String PROP_MAPPER_SORT = "map.sort.class";
+	public static final String PROP_JOB_TRACKER = "mapred.job.tracker";
+	public static final String PROP_FS_NAME = "fs.default.name";
+	
+	public static final boolean SKIP_HADOOP_SORT = Cfg.asBool(PROP_SKIP_HADOOP_SORT, false);
+	
+	private static String OUTPUT_DIR = Cfg.asString(XQueryJobConf.PROP_OUTPUT_DIR, "");
 	static {
-		if (OUTPUT_DIR.charAt(OUTPUT_DIR.length() - 1) != '/') {
+		if (OUTPUT_DIR.length() > 0 && OUTPUT_DIR.charAt(OUTPUT_DIR.length() - 1) != '/') {
 			OUTPUT_DIR = OUTPUT_DIR + "/";
 		}
 	}
@@ -236,6 +242,16 @@ public class XQueryJobConf extends JobConf {
 				"org.brackit.hadoop.io.TupleSerialization",
 				"org.brackit.hadoop.io.KeySerialization",
 				get("io.serializations"));
+		
+		String jobTracker = Cfg.asString(PROP_JOB_TRACKER, null);
+		if (jobTracker != null) {
+			set(PROP_JOB_TRACKER, jobTracker);
+		}
+		
+		String fsName = Cfg.asString(PROP_FS_NAME, null);
+		if (fsName != null) {
+			set(PROP_FS_NAME, fsName);
+		}
 	}
 	
 	private void parseForBind(AST bind) throws IOException

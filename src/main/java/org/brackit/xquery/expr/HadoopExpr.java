@@ -121,6 +121,7 @@ public final class HadoopExpr implements Expr {
 		if (tuple != null) jobConf.setTuple(tuple);
 		jobConf.parseInputsAndOutputs();
 		XQueryJob job = new XQueryJob(jobConf);
+		job.setJarByClass(HadoopExpr.class);
 		
 		if (DELETE_EXISTING) {
 			Path outPath = new Path(jobConf.getOutputDir());
