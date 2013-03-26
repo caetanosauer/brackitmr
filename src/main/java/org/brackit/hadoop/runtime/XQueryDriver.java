@@ -55,8 +55,8 @@ public class XQueryDriver extends Configured implements Tool
 	public int run(String[] args) throws Exception
 	{
 		String[] otherArgs = new GenericOptionsParser(getConf(), args).getRemainingArgs();
-		if (otherArgs.length < 3) {
-			System.err.println("Usage: xqueryjob <xquery file> <output file> [runOnlyNr]");
+		if (otherArgs.length < 1) {
+			System.err.println("Usage: XQueryDriver <xquery file>");
 			return 2;
 		}
 		
@@ -78,7 +78,7 @@ public class XQueryDriver extends Configured implements Tool
 			query = queryBuilder.toString();
 		}
 		
-		XQuery xq = new XQuery(new MRCompileChain(), query);
+		XQuery xq = new XQuery(new MRCompileChain(getConf()), query);
 		xq.evaluate(new QueryContext());
 		
 		return 0;

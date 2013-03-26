@@ -29,6 +29,7 @@ package org.brackit.xquery.compiler;
 
 import java.util.Map;
 
+import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.brackit.hadoop.job.XQueryJobConf;
 import org.brackit.xquery.QueryException;
@@ -45,10 +46,13 @@ import org.brackit.xquery.util.dot.DotUtil;
 import org.brackit.xquery.xdm.Expr;
 
 
-public class MRCompileChain extends CompileChain {
+public class MRCompileChain extends CompileChain implements Configurable {
 
-	public MRCompileChain()
+	protected Configuration conf;
+	
+	public MRCompileChain(Configuration conf)
 	{
+		this.conf = conf;
 		CompileChain.BOTTOM_UP_PLAN = true;
 	}
 	
@@ -85,18 +89,28 @@ public class MRCompileChain extends CompileChain {
 		
 		StaticContext sctx = targets.getStaticContext();
 		Target body = targets.removeBodyTarget();
-		XQueryJobConf conf = new XQueryJobConf(new Configuration());
-		conf.setTargets(targets);
+		XQueryJobConf jobConf = new XQueryJobConf(conf);
+		jobConf.setTargets(targets);
 		
 		// add compiled module to library
 		if (analyzer.getTargetNS() != null) {
 			resolver.register(analyzer.getTargetNS(), sctx);
 		}
 		
-		MRTranslator translator = new MRTranslator(conf, options);
+		MRTranslator translator = new MRTranslator(jobConf, options);
 		return translator.expression(sctx, body.getAst(), false);
 	}
-	
-	
+
+	@Override
+	public Configuration getConf()
+	{
+		return conf;
+	}
+
+	@Override
+	public void setConf(Configuration conf)
+	{
+		this.conf = conf;
+	}	
 
 }

@@ -60,7 +60,7 @@ public abstract class AbstractSerialization extends Configured {
 			// if we are reading, the task must be either an id-mapper or any kind of reducer
 			//   if it's an id mapper, the types are in the PhaseOut below the shuffle, which is copied to the Shuffle itself
 			//   if it's a reducer, the types are in the PhaseIn parent
-			// if we are writing, the task must be a normal non-final mapper or a mid reducer
+			// if we are writing, the task must be a normal non-final mapper or a reducer
 			//   if it's a normal mapper, types are in the PhaseOut node at the tag child index of the shuffle
 			//	 if it's a mid reducer, types are in the PhaseOut in the root of the AST
 			
@@ -69,7 +69,7 @@ public abstract class AbstractSerialization extends Configured {
 					extractTypesAndIndexes(node, 0);
 				}
 				else {
-					if (node.getChildCount() > 0) {
+					if (node.getChildCount() > 1) {
 						for (int i = 0; i < node.getChildCount(); i++) {
 							extractTypesAndIndexes(node.getParent(), i);
 						}
@@ -95,7 +95,12 @@ public abstract class AbstractSerialization extends Configured {
 					while (root.getParent() != null) {
 						root = root.getParent();
 					}
-					extractTypesAndIndexes(root, 0);
+					if (root.getType() == XQExt.PhaseOut) {
+						extractTypesAndIndexes(root, 0);
+					}
+					else {
+						extractTypesAndIndexes(node, 0);
+					}
 				}
 			}
 		}
@@ -131,6 +136,8 @@ public abstract class AbstractSerialization extends Configured {
 		if (pos == 1) {
 			isMultiMap = true;
 		}
+//		System.out.println("Extracting type info from node " + node.getType());
+//		System.out.println("Properties: " + node.getProperties());
 		types[pos] = (ArrayList<SequenceType>) node.getProperty("types");
 		keyIndexes[pos] = (ArrayList<Integer>) node.getProperty("keyIndexes");
 
