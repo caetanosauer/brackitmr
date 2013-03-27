@@ -27,43 +27,33 @@
  */
 package org.brackit.hadoop.runtime;
 
+import java.util.Random;
+
 import org.apache.hadoop.io.RawComparator;
+import org.brackit.hadoop.job.XQueryJobConf;
+import org.brackit.xquery.util.Cfg;
 
-public class XQJoinKeyComparator implements RawComparator<XQGroupingKey> {
+public class DummyComparator<T> implements RawComparator<T> {
 
-	// TODO: use Cmp class to perform comparisons
-	public int compare(XQGroupingKey a, XQGroupingKey b)
+	public static final boolean RANDOM = Cfg.asBool(XQueryJobConf.PROP_RANDOM_COMPARATOR, false);
+	private static Random rand = new Random(42);
+	
+	@Override
+	public int compare(T o1, T o2)
 	{
-		return a.joinCompareTo(b);
+		return compare(null, 0, 0, null, 0, 0);
 	}
 
-//	public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2)
-//	{
-//		// ignore join tag
-//		l1--;
-//		l2--;		
-//		
-//		int length = l1 < l2 ? l1 : l2;
-//		for (int i = 0; i < length; i++)
-//		{
-//			// anding with 0xff ignores the signal
-//			int x = (b1[s1 + i] & 0xff);
-//			int y = (b2[s2 + i] & 0xff);
-//			if (x != y) {
-//				return x - y;
-//			}
-//		}
-//		return l1 - l2;
-//	}
-	
-	public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2)
+	@Override
+	public int compare(byte[] arg0, int arg1, int arg2, byte[] arg3, int arg4, int arg5)
 	{
-		// compare based only on join tag
-		// anding with 0xff ignores the signal
-		int x = (b1[s1] & 0xff);
-		int y = (b2[s2] & 0xff);
-		return y - x;
+		if (!RANDOM) {
+			return 1;
+		}
+		if (rand.nextBoolean()) {
+			return -1;
+		}
+		return 1;
 	}
-	
-	
+
 }

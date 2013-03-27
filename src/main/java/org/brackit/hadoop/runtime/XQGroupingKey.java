@@ -81,30 +81,6 @@ public class XQGroupingKey implements Comparable<XQGroupingKey> {
 		return keys[index];
 	}
 
-//	public void readFields(DataInput in) throws IOException
-//	{
-//		int length = in.readByte();
-//		keys = new Atomic[length];
-//		indexes = new int[length];
-//		for (int i = 0; i < length; i++) {
-//			keys[i] = (Atomic) ItemSerializer.readItem(in, null);
-//		}
-//		for (int i = 0; i < length; i++) {
-//			indexes[i] = in.readByte();
-//		}
-//	}
-//
-//	public void write(DataOutput out) throws IOException
-//	{
-//		out.writeByte(keys.length);
-//		for (int i = 0; i < keys.length; i++) {
-//			ItemSerializer.writeItem(out, keys[i]);
-//		}
-//		for (int i = 0; i < keys.length; i++) {
-//			out.writeByte(indexes[i]);
-//		}
-//	}
-	
 	@Override
 	public int hashCode()
 	{
@@ -147,18 +123,19 @@ public class XQGroupingKey implements Comparable<XQGroupingKey> {
 	
 	public int joinCompareTo(XQGroupingKey other)
 	{
-		for (int i = 0; i < keys.length - 1; i++) {
-			int cmp = keys[i].atomicCmp(other.keys[i]);
-			if (cmp != 0) {
-				return cmp;
-			}
-		}
-		
-		if (keys.length != other.keys.length) {
-			return keys.length > other.keys.length ? 1 : -1;
-		}
-		
-		return 0;
+		return keys[keys.length - 1].atomicCmp(other.keys[other.keys.length - 1]);
+//		for (int i = 0; i < keys.length - 1; i++) {
+//			int cmp = keys[i].atomicCmp(other.keys[i]);
+//			if (cmp != 0) {
+//				return cmp;
+//			}
+//		}
+//		
+//		if (keys.length != other.keys.length) {
+//			return keys.length > other.keys.length ? 1 : -1;
+//		}
+//		
+//		return 0;
 	}
 	
 	public String toString()

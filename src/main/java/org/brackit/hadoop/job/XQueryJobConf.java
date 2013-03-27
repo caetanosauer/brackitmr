@@ -29,12 +29,15 @@ package org.brackit.hadoop.job;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map.Entry;
+import java.util.Properties;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.conf.Configuration;
@@ -68,12 +71,16 @@ public class XQueryJobConf extends JobConf {
 	{
 		super(conf);
 		setJobName("BrackitMRJob");
-	}
-	
-	public XQueryJobConf()
-	{
-		super();
-		setJobName("BrackitMRJob");
+		
+		Properties prop = new Properties();
+		try {
+			prop.load(new FileInputStream(Cfg.CONFIG_FILE));
+			for (Entry<Object,Object> e : prop.entrySet()) {
+				set(e.getKey().toString(), e.getValue().toString());
+			}
+		}
+		catch (IOException e) {
+		}
 	}
 	
 	public static final String PROP_AST = "org.brackit.hadoop.jobAst";
@@ -81,19 +88,18 @@ public class XQueryJobConf extends JobConf {
 	public static final String PROP_TUPLE = "org.brackit.hadoop.contextTuple";
 	public static final String PROP_TARGETS = "org.brackit.hadoop.targets";
 	public static final String PROP_SEQ_NUMBER = "org.brackit.hadoop.seqNumber";
-	public static final String PROP_NUM_REDUCERS = "org.brackit.hadoop.numReducers";
 	public static final String PROP_OUTPUT_DIR = "org.brackit.hadoop.outputDir";
 	public static final String PROP_INPUT_FORMATS = "org.brackit.hadoop.inputFormats";
 	public static final String PROP_INPUT_PATHS = "org.brackit.hadoop.inputPaths";
 	public static final String PROP_HASH_TABLE_SIZE = "org.brackit.hadoop.joinHashTableSize";
 	public static final String PROP_DELETE_EXISTING = "org.brackit.hadoop.deleteExisting";
 	public static final String PROP_SKIP_HADOOP_SORT = "org.brackit.hadoop.skipHadoopSort";
+	public static final String PROP_RANDOM_COMPARATOR = "org.brackit.hadoop.randomComparator";
+	public static final String PROP_HASH_GROUP_BY = "org.brackit.hadoop.hashGroupBy";
 	
 	public static final String PROP_MAPPER_SORT = "map.sort.class";
 	public static final String PROP_JOB_TRACKER = "mapred.job.tracker";
 	public static final String PROP_FS_NAME = "fs.default.name";
-	
-	public static final boolean SKIP_HADOOP_SORT = Cfg.asBool(PROP_SKIP_HADOOP_SORT, false);
 	
 	private static String OUTPUT_DIR = Cfg.asString(XQueryJobConf.PROP_OUTPUT_DIR, "");
 	static {

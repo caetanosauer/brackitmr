@@ -113,12 +113,16 @@ public class HadoopCSVCollection extends CSVCollection {
 					public Item next() throws QueryException
 					{
 						try {
-							if (!context.nextKeyValue()) {
-								return null;
+							while (true) {
+								if (!context.nextKeyValue()) {
+									return null;
+								}
+								Text text = (Text) context.getCurrentValue();
+								Atomic[] fields = csv.split(text.toString());
+								if (fields != null) {
+									return new ArrayRecord(csv.getUseKeys(), fields);
+								}
 							}
-							Text text = (Text) context.getCurrentValue();
-							Atomic[] fields = csv.split(text.toString());
-							return new ArrayRecord(csv.getUseKeys(), fields);
 						}
 						catch (Exception e) {
 							throw new QueryException(e, ErrorCode.BIT_DYN_ABORTED_ERROR);

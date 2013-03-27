@@ -38,6 +38,7 @@ import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.brackit.hadoop.io.CollectionInputFormat;
+import org.brackit.hadoop.runtime.DummyComparator;
 import org.brackit.hadoop.runtime.XQGroupingKey;
 import org.brackit.hadoop.runtime.XQJoinKeyComparator;
 import org.brackit.hadoop.runtime.XQJoinKeyPartitioner;
@@ -47,7 +48,6 @@ import org.brackit.xquery.compiler.AST;
 import org.brackit.xquery.compiler.XQ;
 import org.brackit.xquery.compiler.XQExt;
 import org.brackit.xquery.operator.TupleImpl;
-import org.brackit.xquery.util.Cfg;
 
 public class XQueryJob extends Job {
 	
@@ -55,8 +55,7 @@ public class XQueryJob extends Job {
 	private boolean isRoot = false;
 	private boolean hasShuffle = false;
 	private boolean isJoin = false;
-	
-	private static int NUM_REDUCERS = Cfg.asInt(XQueryJobConf.PROP_NUM_REDUCERS, 10);
+	private boolean skipSort = false;
 	
 	public XQueryJob(XQueryJobConf conf) throws IOException
 	{
@@ -65,7 +64,6 @@ public class XQueryJob extends Job {
 		walkAst(conf.getAst());
 		setMapperClass(isLeaf ? XQTask.XQMapper.class : Mapper.class);
 		setReducerClass(XQTask.XQReducer.class);
-		setNumReduceTasks(hasShuffle ? NUM_REDUCERS : 0);
 		setInputFormatClass(isLeaf ? CollectionInputFormat.class : SequenceFileInputFormat.class);
 		setOutputFormatClass(isRoot ? TextOutputFormat.class : SequenceFileOutputFormat.class);
 		setOutputKeyClass(isRoot ? NullWritable.class : XQGroupingKey.class);
@@ -74,9 +72,14 @@ public class XQueryJob extends Job {
 		if (hasShuffle) {
 			setMapOutputKeyClass(XQGroupingKey.class);
 			setMapOutputValueClass(TupleImpl.class);
-			setGroupingComparatorClass(isJoin ? XQJoinKeyComparator.class : XQRawKeyComparator.class);
-			setSortComparatorClass(isJoin ? XQJoinKeyComparator.class : XQRawKeyComparator.class);
+			setGroupingComparatorClass(isJoin ? XQJoinKeyComparator.class : 
+				skipSort ? DummyComparator.class : XQRawKeyComparator.class);
+			setSortComparatorClass(isJoin ? XQJoinKeyComparator.class : 
+				skipSort ? DummyComparator.class : XQRawKeyComparator.class);
 			if (isJoin) setPartitionerClass(XQJoinKeyPartitioner.class);
+		}
+		else {
+			setNumReduceTasks(0);
 		}
 	}
 	
@@ -94,6 +97,7 @@ public class XQueryJob extends Job {
 		if (node.getType() == XQExt.Shuffle) {
 			hasShuffle = true;
 			isJoin = node.checkProperty("isJoin");
+			skipSort = node.checkProperty("skipSort");
 			for (int i = 0; i < node.getChildCount(); i++) {
 				walkAst(node.getChild(i));
 			}

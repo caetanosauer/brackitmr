@@ -35,6 +35,7 @@ import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.compiler.AST;
 import org.brackit.xquery.compiler.XQ;
 import org.brackit.xquery.compiler.XQExt;
+import org.brackit.xquery.util.Cfg;
 import org.brackit.xquery.xdm.type.SequenceType;
 
 public class ShuffleRewrite extends Walker {
@@ -157,7 +158,6 @@ public class ShuffleRewrite extends Walker {
 
 		AST postGroup = node.copyTree();
 		AST preGroup = node.copyTree();
-		postGroup.setProperty("sequential", true);
 		postGroup.setProperty("local", true);
 		preGroup.setProperty("local", true);
 		
@@ -208,7 +208,10 @@ public class ShuffleRewrite extends Walker {
 		while (child != null && child.getType() != XQ.OrderBy) {
 			child = child.getLastChild();
 		}
-		boolean addOrderBy = XQueryJobConf.SKIP_HADOOP_SORT;
+		
+		boolean hashGroupBy = Cfg.asBool(XQueryJobConf.PROP_HASH_GROUP_BY, false);
+		boolean addOrderBy = Cfg.asBool(XQueryJobConf.PROP_SKIP_HADOOP_SORT, false) && !hashGroupBy;
+		
 		if (addOrderBy && child != null && child.getChildCount() == keyLen + 1) {
 			int i = 0;
 			while (i < child.getChildCount() - 1) {
@@ -234,8 +237,12 @@ public class ShuffleRewrite extends Walker {
 			preGroup.addChild(orderBy);
 			shuffle.setProperty("skipSort", true);
 			preGroup.setProperty("sequential", true);
+			postGroup.setProperty("sequential", true);
 		}
 		else {
+			if (hashGroupBy) {
+				shuffle.setProperty("skipSort", true);
+			}
 			preGroup.addChild(next);
 		}
 		

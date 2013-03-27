@@ -59,7 +59,8 @@ public class HashPostJoin implements Operator {
 	
 	protected void put(int hash, Tuple tuple)
 	{
-		int b = hash % table.length;
+//		System.out.println("Adding to hash table " + tuple);
+		int b = (hash & Integer.MAX_VALUE) % table.length;
 		if (table[b].length == lengths[b]) {
 			table[b] = Arrays.copyOf(table[b], lengths[b] + 3);
 		}
@@ -70,6 +71,7 @@ public class HashPostJoin implements Operator {
 	@Override
 	public Cursor create(QueryContext ctx, Tuple tuple) throws QueryException
 	{
+//		System.out.println("Starting HashPostJoin, left key = " + leftKeyIndex + ", right key = " + rightKeyIndex);
 		final Cursor in = taggedInput.create(ctx, tuple);
 		in.open(ctx);
 		
@@ -103,26 +105,26 @@ public class HashPostJoin implements Operator {
 			@Override
 			public Tuple next(QueryContext ctx) throws QueryException
 			{
-				if (matches == null || m >= numMatches) {
+				while (matches == null || m >= numMatches) {
 					if (t == null) {
 						return null;
 					}
-					if (t.array()[width - 1].equals(Int32.ONE)) {
+					if (!t.array()[width - 1].equals(Int32.ZERO)) {
 						throw new QueryException(ErrorCode.BIT_DYN_ABORTED_ERROR,
 								"TagSplitterJoin input must be sorted on tags in reverse order");
 					}
 					t = t.project(0, width - 1);
 
 					Atomic lKey = (Atomic) t.array()[leftKeyIndex];
-					int b = lKey.hashCode() % table.length;
+//					System.out.println("Probing match for tuple " + t);
+					int b = (lKey.hashCode() & Integer.MAX_VALUE) % table.length;
 					Tuple[] probed = table[b];
 					if (lengths[b] == 0) {
 						t = in.next(ctx);
-						return null;
+						continue;
 					}
 
 					matches = new Tuple[probed.length];
-					m = 0;
 					int j = 0;
 					for (int i = 0; i < lengths[b]; i++) {
 						Atomic rKey = (Atomic) probed[i].array()[rightKeyIndex];
@@ -134,10 +136,8 @@ public class HashPostJoin implements Operator {
 						}
 					}
 					numMatches = j;
+					m = 0;
 					t = in.next(ctx);
-				}
-				if (m >= matches.length) {
-					return null;
 				}
 				return matches[m++];
 			}
