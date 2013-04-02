@@ -96,18 +96,21 @@ public final class HadoopExpr implements Expr {
 		while (root.getParent().getType() != XQExt.Shuffle && root.getType() != XQ.End) {
 			root = root.getParent();
 		}
-		root.getParent().deleteChild(root.getChildIndex());
+		
+		if (root.getParent().getType() == XQExt.Shuffle) {
+			AST phaseOut = root.copy();
+			phaseOut.setProperty("inputSeq", thisSeq);
+			root.getParent().replaceChild(root.getChildIndex(), phaseOut);
+		}
+		else {
+			root.getParent().deleteChild(root.getChildIndex());
+		}
 		
 		// remove job from parent
 		if (parent != null) {
 			parent.children.remove(0);
-			parent.addInputSeq(seq);
 		}
 		
-		// set inputs and run job
-		if (s.inputSeqs.size() > 0) {
-			s.shuffle.setProperty("inputSeqs", s.inputSeqs);
-		}
 		run (root.copyTree(), thisSeq, ctx, tuple);
 		return seq;
 	}
@@ -164,14 +167,9 @@ public final class HadoopExpr implements Expr {
 	private static class ShuffleTree {
 		AST shuffle;
 		ArrayList<ShuffleTree> children = new ArrayList<ShuffleTree>();
-		ArrayList<Integer> inputSeqs = new ArrayList<Integer>();
 
 		ShuffleTree(AST shuffle, ShuffleTree parent) {
 			this.shuffle = shuffle;
-		}
-		
-		void addInputSeq(int seq) {
-			inputSeqs.add(seq);
 		}
 		
 		static ShuffleTree build(AST node, ShuffleTree current)

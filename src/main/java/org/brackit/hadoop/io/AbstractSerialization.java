@@ -52,13 +52,16 @@ public abstract class AbstractSerialization extends Configured {
 		
 		if (node.getType() == XQExt.Shuffle) {
 			int len = node.getChildCount();
-			if (len == 0) len = 1;			
+			if (len == 0) len = 1;	
+			if (len == 1 && node.checkProperty("isJoin")) {
+				len = 2;
+			}
 			types = new List[len];
 			keyIndexes = new List[len];
 			
 			// we need to know the types of the tuples being read/written
 			// if we are reading, the task must be either an id-mapper or any kind of reducer
-			//   if it's an id mapper, the types are in the PhaseOut below the shuffle, which is copied to the Shuffle itself
+			//   if it's an id-mapper, the types are in the PhaseOut's below the shuffle, which is copied to the Shuffle itself
 			//   if it's a reducer, the types are in the PhaseIn parent
 			// if we are writing, the task must be a normal non-final mapper or a reducer
 			//   if it's a normal mapper, types are in the PhaseOut node at the tag child index of the shuffle
@@ -66,7 +69,14 @@ public abstract class AbstractSerialization extends Configured {
 			
 			if (reading) {
 				if (isMapper()) {
-					extractTypesAndIndexes(node, 0);
+					if (node.getChildCount() > 1) {
+						for (int i = 0; i < node.getChildCount(); i++) {
+							extractTypesAndIndexes(node, i);
+						}
+					}
+					else {
+						extractTypesAndIndexes(node, 0);
+					}
 				}
 				else {
 					if (node.getChildCount() > 1) {
@@ -100,6 +110,10 @@ public abstract class AbstractSerialization extends Configured {
 					}
 					else {
 						extractTypesAndIndexes(node, 0);
+					}
+					// mid-reducer preceding a join -> tag must be written
+					if (root.checkProperty("isJoin")) {
+						isMultiMap = true;
 					}
 				}
 			}

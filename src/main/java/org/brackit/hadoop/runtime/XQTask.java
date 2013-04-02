@@ -28,6 +28,7 @@
 package org.brackit.hadoop.runtime;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
@@ -35,6 +36,8 @@ import org.brackit.hadoop.io.CollectionInputSplit;
 import org.brackit.hadoop.job.XQueryJobConf;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.Tuple;
+import org.brackit.xquery.atomic.Atomic;
+import org.brackit.xquery.atomic.Int32;
 import org.brackit.xquery.compiler.AST;
 import org.brackit.xquery.compiler.Target;
 import org.brackit.xquery.compiler.Targets;
@@ -54,15 +57,8 @@ public class XQTask {
 			try {
 				HadoopQueryContext hctx = new HadoopQueryContext(context);
 				XQueryJobConf conf = new XQueryJobConf(context.getConfiguration());
-				Targets targets = conf.getTargets();
-				MRTranslator translator = new MRTranslator(conf, null);
-				if (targets != null) {
-					for (Target t : targets) {
-						t.translate(translator);
-					}
-				}
-
-				AST ast = conf.getAst();			
+				
+				AST ast = conf.getAst();
 				AST node = ast.getLastChild();
 				while (node.getType() != XQ.Start && node.getType() != XQExt.Shuffle) {
 					node = node.getLastChild();
@@ -73,6 +69,19 @@ public class XQTask {
 				}
 				else {
 					node = ast;
+				}
+				
+				if (node.getChildCount() == 0) {
+					runIdMapper(context, node);
+					return;
+				}
+				
+				Targets targets = conf.getTargets();
+				MRTranslator translator = new MRTranslator(conf, null);
+				if (targets != null) {
+					for (Target t : targets) {
+						t.translate(translator);
+					}
 				}
 				
 				Tuple tuple = conf.getTuple();
@@ -87,6 +96,34 @@ public class XQTask {
 				throw new IOException(e);
 			}
 		}		
+		
+		@SuppressWarnings({ "unchecked", "rawtypes" })
+		private void runIdMapper(Mapper.Context context, AST node) throws IOException, InterruptedException
+		{
+			XQGroupingKey key = null;
+			Tuple value = null;
+			Integer tag = (Integer) node.getProperty("tag");
+			if (tag != null) {
+				Int32 tagAtomic = new Int32(tag);
+				try {
+					while (context.nextKeyValue()) {
+						key = (XQGroupingKey) context.getCurrentKey();
+						Atomic[] keys = Arrays.copyOf(key.keys, key.keys.length + 1);
+						keys[keys.length - 1] = tagAtomic; 
+						key = new XQGroupingKey(keys, key.indexes);
+						value = (Tuple) context.getCurrentValue();
+						key.rebuildTuple(value);
+						context.write(key, value);
+					}
+				}
+				catch (QueryException e) {
+					throw new IOException(e);
+				}
+			}
+			else {
+				super.run(context);
+			}
+		}
 		
 	}
 	

@@ -28,46 +28,78 @@
 package org.brackit.xquery.operator;
 
 import java.util.Arrays;
+import java.util.HashMap;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.brackit.hadoop.job.XQueryJobConf;
-import org.brackit.xquery.ErrorCode;
 import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.Tuple;
 import org.brackit.xquery.atomic.Atomic;
 import org.brackit.xquery.atomic.Int32;
-import org.brackit.xquery.util.Cfg;
 import org.brackit.xquery.xdm.OperationNotSupportedException;
 
 public class HashPostJoin implements Operator {
 
-	public static final int HASH_TABLE_SIZE = Cfg.asInt(XQueryJobConf.PROP_HASH_TABLE_SIZE, 200);
+	private static final Log LOG = LogFactory.getLog(HashPostJoin.class);
+	
+	private final int HASH_TABLE_SIZE;
 	
 	protected Operator taggedInput;
 	protected int leftKeyIndex;
 	protected int rightKeyIndex;
+	protected HashMap<Atomic, Tuple[]> table;
 	
-	protected Tuple[][] table = new Tuple[HASH_TABLE_SIZE][3];
-	protected int[] lengths = new int[HASH_TABLE_SIZE];
-	
-	public HashPostJoin(Operator input, int leftKeyIndex, int rightKeyIndex)
+	public HashPostJoin(Operator input, int leftKeyIndex, int rightKeyIndex, Configuration conf)
 	{
 		this.taggedInput = input;
 		this.leftKeyIndex = leftKeyIndex;
 		this.rightKeyIndex = rightKeyIndex;
+		
+		HASH_TABLE_SIZE = conf.getInt(XQueryJobConf.PROP_HASH_TABLE_SIZE, 8192);
+		
+		table = new HashMap<Atomic, Tuple[]>(HASH_TABLE_SIZE);
 	}
 	
-	protected void put(int hash, Tuple tuple)
+	protected void put(Atomic key, Tuple tuple)
 	{
-//		System.out.println("Adding to hash table " + tuple);
-		int b = (hash & Integer.MAX_VALUE) % table.length;
-		if (table[b].length == lengths[b]) {
-			table[b] = Arrays.copyOf(table[b], lengths[b] + 3);
+		Tuple[] bucket = table.get(key);
+		if (bucket == null) {
+			bucket = new Tuple[]{tuple};
 		}
-		table[b][lengths[b]] = tuple;
-		lengths[b]++;
+		else {
+			bucket = Arrays.copyOf(bucket, bucket.length + 1);
+			bucket[bucket.length - 1] = tuple;
+		}
+		table.put(key, bucket);
 	}
-
+	
+	protected Tuple buildHashTable(Tuple first, Cursor in, QueryContext ctx) throws QueryException
+	{
+		table.clear();
+		
+		Tuple t = first != null ? first : in.next(ctx);
+		int count = 0;
+		while (t != null) {
+			int tag = ((Int32) t.array()[t.getSize() - 1]).v;
+			if (tag == 1) {
+				Tuple proj = t.project(0, t.getSize() - 1);
+				put((Atomic) proj.array()[rightKeyIndex], proj);				
+				t = in.next(ctx);
+				count++;
+			}
+			else {
+				break;
+			}
+		}
+		
+		LOG.info(String.format("Built hash table with %d tuples", count));
+		
+		return t;
+	}
+	
 	@Override
 	public Cursor create(QueryContext ctx, Tuple tuple) throws QueryException
 	{
@@ -75,25 +107,12 @@ public class HashPostJoin implements Operator {
 		final Cursor in = taggedInput.create(ctx, tuple);
 		in.open(ctx);
 		
-		Tuple t = in.next(ctx);
-		while (t != null) {
-			int tag = ((Int32) t.array()[t.getSize() - 1]).v;
-			if (tag == 1) {
-				Tuple proj = t.project(0, t.getSize() - 1);
-				int hash = proj.array()[rightKeyIndex].hashCode();
-				put(hash, proj);
-				t = in.next(ctx);
-			}
-			else {
-				break;
-			}
-		}
+		final Tuple first = buildHashTable(null, in, ctx);
 		
-		final Tuple first = t;
 		return new Cursor() {
 			
 			Tuple t = first;
-			int width = first.getSize();
+			int width = first != null ? first.getSize() : 0;
 			Tuple[] matches = null;
 			int numMatches;
 			int m = 0;
@@ -105,38 +124,31 @@ public class HashPostJoin implements Operator {
 			@Override
 			public Tuple next(QueryContext ctx) throws QueryException
 			{
+				// fetch next tuple from (left) input and probe hash table for matches
 				while (matches == null || m >= numMatches) {
 					if (t == null) {
 						return null;
 					}
-					if (!t.array()[width - 1].equals(Int32.ZERO)) {
-						throw new QueryException(ErrorCode.BIT_DYN_ABORTED_ERROR,
-								"TagSplitterJoin input must be sorted on tags in reverse order");
+					if (t.array()[t.array().length - 1].equals(Int32.ONE)) {
+						// it fetched tuple actually belongs to right input, rebuild hash table
+						t = buildHashTable(t, in, ctx);
+						if (t == null) {
+							return null;
+						}
 					}
 					t = t.project(0, width - 1);
 
 					Atomic lKey = (Atomic) t.array()[leftKeyIndex];
-//					System.out.println("Probing match for tuple " + t);
-					int b = (lKey.hashCode() & Integer.MAX_VALUE) % table.length;
-					Tuple[] probed = table[b];
-					if (lengths[b] == 0) {
-						t = in.next(ctx);
-						continue;
-					}
-
-					matches = new Tuple[probed.length];
-					int j = 0;
-					for (int i = 0; i < lengths[b]; i++) {
-						Atomic rKey = (Atomic) probed[i].array()[rightKeyIndex];
-						if (lKey.atomicCmp(rKey) == 0) {
-							for (int k = 0; k < t.getSize(); k++) {
-								probed[i].array()[k] = t.array()[k];
+					matches = table.get(lKey);
+					if (matches != null) {
+						for (Tuple match : matches) {
+							for (int i = 0; i < t.getSize(); i++) {
+								match.array()[i] = t.array()[i];
 							}
-							matches[j++] = probed[i];
 						}
+						numMatches = matches.length;
+						m = 0;
 					}
-					numMatches = j;
-					m = 0;
 					t = in.next(ctx);
 				}
 				return matches[m++];
@@ -147,7 +159,7 @@ public class HashPostJoin implements Operator {
 			}
 		};
 	}
-
+	
 	@Override
 	public Cursor create(QueryContext ctx, Tuple[] t, int len)
 			throws QueryException

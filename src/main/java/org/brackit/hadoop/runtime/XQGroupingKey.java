@@ -97,12 +97,15 @@ public class XQGroupingKey implements Comparable<XQGroupingKey> {
 	public int joinHashCode()
 	{
 		// TODO: implement efficient type-dependent hash code
-		int hash = 137;
-		int multiplier = 13;
-		for (int i = 0; i < keys.length - 1; i++) {
-			hash = hash * multiplier + keys[i].hashCode();
+		if (keys.length > 2) {
+			int hash = 79;
+			int multiplier = 31;
+			for (int i = 0; i < keys.length - 1; i++) {
+				hash = hash * multiplier + keys[i].hashCode();
+			}
+			return hash;
 		}
-		return hash;
+		return keys[0].hashCode();
 	}
 
 	public int compareTo(XQGroupingKey other)

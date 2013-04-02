@@ -46,6 +46,7 @@ import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.InputFormat;
+import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.brackit.hadoop.io.HadoopCSVCollection;
 import org.brackit.hadoop.runtime.DummySort;
@@ -92,10 +93,13 @@ public class XQueryJobConf extends JobConf {
 	public static final String PROP_INPUT_FORMATS = "org.brackit.hadoop.inputFormats";
 	public static final String PROP_INPUT_PATHS = "org.brackit.hadoop.inputPaths";
 	public static final String PROP_HASH_TABLE_SIZE = "org.brackit.hadoop.joinHashTableSize";
+	public static final String PROP_HASH_BUCKET_SIZE = "org.brackit.hadoop.joinHashBucketSize";
 	public static final String PROP_DELETE_EXISTING = "org.brackit.hadoop.deleteExisting";
 	public static final String PROP_SKIP_HADOOP_SORT = "org.brackit.hadoop.skipHadoopSort";
 	public static final String PROP_RANDOM_COMPARATOR = "org.brackit.hadoop.randomComparator";
 	public static final String PROP_HASH_GROUP_BY = "org.brackit.hadoop.hashGroupBy";
+	public static final String PROP_HASH_JOIN_PARTITIONS = "org.brackit.hadoop.hashJoinPartitions";
+	public static final String PROP_COMPUTE_HASH_TABLE_STATS = "org.brackit.hadoop.computeHashTableStats";
 	
 	public static final String PROP_MAPPER_SORT = "map.sort.class";
 	public static final String PROP_JOB_TRACKER = "mapred.job.tracker";
@@ -218,16 +222,14 @@ public class XQueryJobConf extends JobConf {
 		}
 		
 		if (node.getType() == XQExt.Shuffle) {
-			if (node.getChildCount() == 0) {
-				@SuppressWarnings("unchecked")
-				ArrayList<Integer> inputSeqs = (ArrayList<Integer>) node.getProperty("inputSeqs");
-				for (Integer inputSeq : inputSeqs) {
-					FileInputFormat.addInputPath(this, new Path(OUTPUT_DIR + getJobName() + "_temp_" + inputSeq));
+			for (int i = 0; i < node.getChildCount(); i++) {
+				AST start = node.getChild(i);
+				Integer inputSeq = (Integer) start.getProperty("inputSeq");
+				if (inputSeq != null && start.getChildCount() == 0) {
+					addInputFormat(SequenceFileInputFormat.class.getName());
+					addInputPath(OUTPUT_DIR + getJobName() + "_temp_" + inputSeq);
 				}
-			}
-			else {
-				for (int i = 0; i < node.getChildCount(); i++) {
-					AST start = node.getChild(i);
+				else {
 					while (start.getType() != XQ.Start) {
 						start = start.getLastChild();
 					}

@@ -27,6 +27,7 @@
  */
 package org.brackit.hadoop.io;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -123,6 +124,9 @@ public class KeySerialization extends AbstractSerialization implements Serializa
 				return new XQGroupingKey(keys, intArray(keyIndexes[tag]));
 			}
 			catch (QueryException e) {
+				throw new IOException(e);
+			}
+			catch (EOFException e) {
 				throw new IOException(e);
 			}
 		}

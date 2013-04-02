@@ -42,7 +42,7 @@ public class XQExt {
 		"ShuffleSpec",
 		"PhaseIn",
 		"PhaseOut",
-		"PostJoin"
+		"PostJoin",
 	};
 
 	public static final AST createNode(int key)

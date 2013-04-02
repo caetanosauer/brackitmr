@@ -47,6 +47,10 @@ public class PhaseOutExpr implements Expr {
 		try {
 			Tuple t = c.next(hctx);
 			XQGroupingKey key = null;
+			if (t == null) {
+				throw new QueryException(ErrorCode.BIT_DYN_ABORTED_ERROR,
+						"PhaseOut produced empty output");
+			}
 			while (t != null) {
 				if (isJoin) {
 					t = t.concat(tag);

@@ -33,8 +33,6 @@ import javax.xml.soap.Text;
 
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.brackit.hadoop.io.CollectionInputFormat;
@@ -51,7 +49,6 @@ import org.brackit.xquery.operator.TupleImpl;
 
 public class XQueryJob extends Job {
 	
-	private boolean isLeaf = false;
 	private boolean isRoot = false;
 	private boolean hasShuffle = false;
 	private boolean isJoin = false;
@@ -62,9 +59,9 @@ public class XQueryJob extends Job {
 		super(conf);
 		
 		walkAst(conf.getAst());
-		setMapperClass(isLeaf ? XQTask.XQMapper.class : Mapper.class);
+		setMapperClass(XQTask.XQMapper.class);
 		setReducerClass(XQTask.XQReducer.class);
-		setInputFormatClass(isLeaf ? CollectionInputFormat.class : SequenceFileInputFormat.class);
+		setInputFormatClass(CollectionInputFormat.class);
 		setOutputFormatClass(isRoot ? TextOutputFormat.class : SequenceFileOutputFormat.class);
 		setOutputKeyClass(isRoot ? NullWritable.class : XQGroupingKey.class);
 		setOutputValueClass(isRoot ? Text.class : TupleImpl.class);
@@ -90,9 +87,6 @@ public class XQueryJob extends Job {
 		}
 		if (!isRoot && node.getType() == XQ.End) {
 			isRoot = true;
-		}
-		else if (!isLeaf && node.getType() == XQ.Start) {
-			isLeaf = true;
 		}
 		if (node.getType() == XQExt.Shuffle) {
 			hasShuffle = true;

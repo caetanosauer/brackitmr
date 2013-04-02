@@ -157,7 +157,7 @@ public class TupleSerialization extends AbstractSerialization implements Seriali
 							break;
 						}
 					}
-					seqs[i] = isKey? null : in.readSequence(types.get(i));
+					seqs[i] = isKey ? null : in.readSequence(types.get(i));
 				}
 				if (isMultiMap) {
 					seqs[seqs.length - 1] = new Int32(tag);

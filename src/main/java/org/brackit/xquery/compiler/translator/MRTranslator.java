@@ -162,7 +162,7 @@ public class MRTranslator extends BottomUpTranslator {
 		@SuppressWarnings("unchecked")
 		List<List<Integer>> keyIndexes = (List<List<Integer>>) node.getProperty("keyIndexesMap");
 		// TODO: composed join keys?
-		return new HashPostJoin(in, keyIndexes.get(0).get(0), keyIndexes.get(1).get(0));
+		return new HashPostJoin(in, keyIndexes.get(0).get(0), keyIndexes.get(1).get(0), conf);
 	}
 
 }
