@@ -42,13 +42,13 @@ import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.brackit.hadoop.job.XQueryJobConf;
 
-public class CollectionInputFormat<K, V> extends InputFormat<K, V> {
+public class BrackitInputFormat<K, V> extends InputFormat<K, V> {
 
 	@Override
 	public RecordReader<K, V> createRecordReader(InputSplit split, TaskAttemptContext context)
 		throws IOException, InterruptedException
 	{
-		return new CollectionRecordReader<K,V>(split, context);
+		return new BrackitRecordReader<K,V>(split, context);
 	}
 
 	@Override
@@ -72,14 +72,14 @@ public class CollectionInputFormat<K, V> extends InputFormat<K, V> {
 					String pathStr = new Path(paths[pathIndex]).toUri().getPath();
 					String splitPath = ((FileSplit) split).getPath().toUri().getPath();
 					if (splitPath.indexOf(pathStr) > -1) {
-						result.add(new CollectionInputSplit(split, formats.get(i), i, conf));
+						result.add(new BrackitInputSplit(split, formats.get(i), i, conf));
 					}
 				}
 				pathIndex++;
 			}
 			else {
 				for (InputSplit split : format.getSplits(context)) {
-					result.add(new CollectionInputSplit(split, formats.get(i), i, context.getConfiguration()));
+					result.add(new BrackitInputSplit(split, formats.get(i), i, context.getConfiguration()));
 				}
 			}
 		}

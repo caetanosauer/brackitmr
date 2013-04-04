@@ -30,9 +30,11 @@ package org.brackit.hadoop.runtime;
 import java.io.IOException;
 import java.util.Arrays;
 
+import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.brackit.hadoop.io.CollectionInputSplit;
+import org.brackit.hadoop.io.BrackitInputSplit;
+import org.brackit.hadoop.io.RangeInputSplit;
 import org.brackit.hadoop.job.XQueryJobConf;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.Tuple;
@@ -57,6 +59,7 @@ public class XQTask {
 			try {
 				HadoopQueryContext hctx = new HadoopQueryContext(context);
 				XQueryJobConf conf = new XQueryJobConf(context.getConfiguration());
+				InputSplit inputSplit = context.getInputSplit();
 				
 				AST ast = conf.getAst();
 				AST node = ast.getLastChild();
@@ -64,11 +67,29 @@ public class XQTask {
 					node = node.getLastChild();
 				}
 				if (node.getType() == XQExt.Shuffle) {
-					int branch = ((CollectionInputSplit) context.getInputSplit()).getAstBranch();
-					node = node.getChild(branch);
+					if (inputSplit instanceof BrackitInputSplit) {
+						int branch = ((BrackitInputSplit) inputSplit).getAstBranch();
+						node = node.getChild(branch);
+					}
 				}
 				else {
 					node = ast;
+				}
+				
+				if (inputSplit != null && inputSplit instanceof RangeInputSplit) {
+					RangeInputSplit ris = (RangeInputSplit) inputSplit;
+					long begin = ris.getBegin();
+					long end = ris.getEnd();
+					
+					AST forBind = node;
+					while (forBind.getType() != XQ.ForBind) {
+						forBind = forBind.getLastChild();
+					}
+					AST rangeExpr = forBind.getChild(1);
+					if (rangeExpr.getType() == XQ.RangeExpr) {
+						rangeExpr.getChild(0).setValue(new Long(begin));
+						rangeExpr.getChild(1).setValue(new Long(end));
+					}
 				}
 				
 				if (node.getChildCount() == 0) {

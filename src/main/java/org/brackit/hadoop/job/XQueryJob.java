@@ -35,7 +35,7 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
-import org.brackit.hadoop.io.CollectionInputFormat;
+import org.brackit.hadoop.io.BrackitInputFormat;
 import org.brackit.hadoop.runtime.DummyComparator;
 import org.brackit.hadoop.runtime.XQGroupingKey;
 import org.brackit.hadoop.runtime.XQJoinKeyComparator;
@@ -61,7 +61,7 @@ public class XQueryJob extends Job {
 		walkAst(conf.getAst());
 		setMapperClass(XQTask.XQMapper.class);
 		setReducerClass(XQTask.XQReducer.class);
-		setInputFormatClass(CollectionInputFormat.class);
+		setInputFormatClass(BrackitInputFormat.class);
 		setOutputFormatClass(isRoot ? TextOutputFormat.class : SequenceFileOutputFormat.class);
 		setOutputKeyClass(isRoot ? NullWritable.class : XQGroupingKey.class);
 		setOutputValueClass(isRoot ? Text.class : TupleImpl.class);

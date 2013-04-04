@@ -49,6 +49,7 @@ import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.brackit.hadoop.io.HadoopCSVCollection;
+import org.brackit.hadoop.io.RangeInputFormat;
 import org.brackit.hadoop.runtime.DummySort;
 import org.brackit.xquery.Tuple;
 import org.brackit.xquery.compiler.AST;
@@ -92,6 +93,7 @@ public class XQueryJobConf extends JobConf {
 	public static final String PROP_OUTPUT_DIR = "org.brackit.hadoop.outputDir";
 	public static final String PROP_INPUT_FORMATS = "org.brackit.hadoop.inputFormats";
 	public static final String PROP_INPUT_PATHS = "org.brackit.hadoop.inputPaths";
+	public static final String PROP_RANGE_INPUT = "org.brackit.hadoop.rangeInput";
 	public static final String PROP_HASH_TABLE_SIZE = "org.brackit.hadoop.joinHashTableSize";
 	public static final String PROP_HASH_BUCKET_SIZE = "org.brackit.hadoop.joinHashBucketSize";
 	public static final String PROP_DELETE_EXISTING = "org.brackit.hadoop.deleteExisting";
@@ -104,6 +106,7 @@ public class XQueryJobConf extends JobConf {
 	public static final String PROP_MAPPER_SORT = "map.sort.class";
 	public static final String PROP_JOB_TRACKER = "mapred.job.tracker";
 	public static final String PROP_FS_NAME = "fs.default.name";
+	public static final String PROP_NUM_MAP_TASKS = "mapred.map.tasks";
 	
 	private static String OUTPUT_DIR = Cfg.asString(XQueryJobConf.PROP_OUTPUT_DIR, "");
 	static {
@@ -268,21 +271,33 @@ public class XQueryJobConf extends JobConf {
 		if (bind.getType() != XQ.ForBind && bind.getType() != XQ.MultiBind) {
 			throw new IOException("MapReduce queries must begin with a ForBind operator");
 		}
-		// TODO: here we assume for bind is always to collection
-		AST funCall = bind.getType() == XQ.ForBind ? bind.getChild(1) : bind.getChild(0).getChild(1);
-		String collName = funCall.getChild(0).getStringValue();
-		Collection<?> coll = sctx.getCollections().resolve(collName);
-		if (coll == null) {
-			throw new IOException("Could not find declared collection " + collName);
+		AST boundSeq = bind.getType() == XQ.ForBind ? bind.getChild(1) : bind.getChild(0).getChild(1);
+		if (boundSeq.getType() == XQ.RangeExpr) {
+			addInputFormat(RangeInputFormat.class.getName());
+			String begin = boundSeq.getChild(0).getValue().toString();
+			String end = boundSeq.getChild(1).getValue().toString();
+			set(PROP_RANGE_INPUT, String.format("%s-%s", begin, end));
 		}
-		
-		if (coll instanceof HadoopCSVCollection) {
-			addInputFormat(TextInputFormat.class.getName());
-			addInputPath(((HadoopCSVCollection) coll).getLocation());
+		else if (boundSeq.getType() == XQ.FunctionCall) {
+			// TODO: here we assume for bind is always to collection
+			String collName = boundSeq.getChild(0).getStringValue();
+			Collection<?> coll = sctx.getCollections().resolve(collName);
+			if (coll == null) {
+				throw new IOException("Could not find declared collection " + collName);
+			}
+
+			if (coll instanceof HadoopCSVCollection) {
+				addInputFormat(TextInputFormat.class.getName());
+				addInputPath(((HadoopCSVCollection) coll).getLocation());
+			}
+			else {
+				throw new IOException("Collection of type " + coll.getClass().getSimpleName() +
+						" is not supported");
+			}
 		}
 		else {
-			throw new IOException("Collection of type " + coll.getClass().getSimpleName() +
-					" is not supported");
+			throw new IOException("Expressions of type " + XQ.NAMES[boundSeq.getType()] +
+					" are not supported");
 		}
 	}
 	

@@ -42,19 +42,19 @@ import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 
-public class CollectionInputSplit extends InputSplit implements Writable, Configurable {
+public class BrackitInputSplit extends InputSplit implements Writable, Configurable {
 
 	private InputSplit inputSplit;
 	private Class<? extends InputFormat<?, ?>> inputFormatClass;
 	private int astBranch;
 	private Configuration conf;
 	
-	public CollectionInputSplit()
+	public BrackitInputSplit()
 	{
 		
 	}
 	
-	public CollectionInputSplit(InputSplit inputSplit, Class<? extends InputFormat<?,?>> cls,
+	public BrackitInputSplit(InputSplit inputSplit, Class<? extends InputFormat<?,?>> cls,
 			int astBranch, Configuration conf)
 	{
 		this.inputSplit = inputSplit;

@@ -35,14 +35,14 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.util.ReflectionUtils;
 
-public class CollectionRecordReader<K, V> extends RecordReader<K, V> {
+public class BrackitRecordReader<K, V> extends RecordReader<K, V> {
 
 	private RecordReader<K, V> reader;
 	
-	public CollectionRecordReader(InputSplit split, TaskAttemptContext context)
+	public BrackitRecordReader(InputSplit split, TaskAttemptContext context)
 		      throws IOException, InterruptedException
 	{
-		CollectionInputSplit csplit = (CollectionInputSplit) split;
+		BrackitInputSplit csplit = (BrackitInputSplit) split;
 	    @SuppressWarnings("unchecked")
 		InputFormat<K, V> inputFormat = (InputFormat<K, V>) ReflectionUtils
 	        .newInstance(csplit.getInputFormatClass(), context
@@ -54,7 +54,7 @@ public class CollectionRecordReader<K, V> extends RecordReader<K, V> {
 	public void initialize(InputSplit split, TaskAttemptContext context)
 			throws IOException, InterruptedException
 	{
-		reader.initialize(((CollectionInputSplit) split).getInputSplit(), context);
+		reader.initialize(((BrackitInputSplit) split).getInputSplit(), context);
 	}
 
 	@Override
