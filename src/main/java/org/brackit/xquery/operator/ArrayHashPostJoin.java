@@ -28,7 +28,6 @@
 package org.brackit.xquery.operator;
 
 import java.util.Arrays;
-import java.util.HashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -41,43 +40,52 @@ import org.brackit.xquery.atomic.Atomic;
 import org.brackit.xquery.atomic.Int32;
 import org.brackit.xquery.xdm.OperationNotSupportedException;
 
-public class HashPostJoin implements Operator {
+public class ArrayHashPostJoin implements Operator {
 
-	private static final Log LOG = LogFactory.getLog(HashPostJoin.class);
+	private static final Log LOG = LogFactory.getLog(ArrayHashPostJoin.class);
 	
 	private final int HASH_TABLE_SIZE;
+	private final int HASH_BUCKET_SIZE;
+	private final boolean COMPUTE_STATS;
 	
 	protected Operator taggedInput;
 	protected int leftKeyIndex;
 	protected int rightKeyIndex;
-	protected HashMap<Atomic, Tuple[]> table;
+	protected Tuple[][] table;
+	protected int[] lengths;
 	
-	public HashPostJoin(Operator input, int leftKeyIndex, int rightKeyIndex, Configuration conf)
+	public ArrayHashPostJoin(Operator input, int leftKeyIndex, int rightKeyIndex, Configuration conf)
 	{
 		this.taggedInput = input;
 		this.leftKeyIndex = leftKeyIndex;
 		this.rightKeyIndex = rightKeyIndex;
 		
 		HASH_TABLE_SIZE = conf.getInt(XQueryJobConf.PROP_HASH_TABLE_SIZE, 8192);
+		HASH_BUCKET_SIZE = conf.getInt(XQueryJobConf.PROP_HASH_BUCKET_SIZE, 3);
+		COMPUTE_STATS = conf.getBoolean(XQueryJobConf.PROP_COMPUTE_HASH_TABLE_STATS, true);
+		
+		table = new Tuple[HASH_TABLE_SIZE][HASH_BUCKET_SIZE];
+		lengths = new int[HASH_TABLE_SIZE];
 	}
 	
-	protected void put(Atomic key, Tuple tuple)
+	protected void put(Atomic v, Tuple tuple)
 	{
-		Tuple[] bucket = table.get(key);
-		if (bucket == null) {
-			bucket = new Tuple[]{tuple};
+//		System.out.println("Adding to hash table " + tuple);
+		int b = getBucket(v);
+		if (table[b].length == lengths[b]) {
+			table[b] = Arrays.copyOf(table[b], lengths[b] + HASH_BUCKET_SIZE);
 		}
-		else {
-			bucket = Arrays.copyOf(bucket, bucket.length + 1);
-			bucket[bucket.length - 1] = tuple;
-		}
-		table.put(key, bucket);
+		table[b][lengths[b]] = tuple;
+		lengths[b]++;
 	}
-	
+
 	protected Tuple buildHashTable(Tuple first, Cursor in, QueryContext ctx) throws QueryException
 	{
-		table = null;
-		table = new HashMap<Atomic, Tuple[]>(HASH_TABLE_SIZE);
+		for (int i = 0; i < table.length; i++) {
+			lengths[i] = 0;
+			// TODO: should we set all references in a bucket to null
+			// to free memory from previous table? Does that make sense? 
+		}
 		
 		Tuple t = first != null ? first : in.next(ctx);
 		int count = 0;
@@ -85,7 +93,7 @@ public class HashPostJoin implements Operator {
 			int tag = ((Int32) t.array()[t.getSize() - 1]).v;
 			if (tag == 1) {
 				Tuple proj = t.project(0, t.getSize() - 1);
-				put((Atomic) proj.array()[rightKeyIndex], proj);				
+				put((Atomic) proj.array()[rightKeyIndex], proj);
 				t = in.next(ctx);
 				count++;
 			}
@@ -94,7 +102,32 @@ public class HashPostJoin implements Operator {
 			}
 		}
 		
-		LOG.info(String.format("Built hash table with %d tuples", count));
+		LOG.info(String.format("Built hash table with %d buckets and %d tuples", lengths.length, count));
+		
+		if (COMPUTE_STATS) {
+			int maxLen = 0;
+			int minLen = HASH_TABLE_SIZE;
+			int sumLen = 0;
+			int zeroLen = 0;
+			for (int i = 0; i < lengths.length; i++) {
+				int l = lengths[i];
+				if (l > maxLen) maxLen = l;
+				if (l == 0) zeroLen++;
+				else if (l < minLen) minLen = l;
+				sumLen += l;
+			}
+			
+			float avgLen = (float) sumLen / lengths.length;
+			float stdDev = 0;
+			for (int i = 0; i < lengths.length; i++) {
+				stdDev += Math.abs(lengths[i] - avgLen);
+			}
+			stdDev /= lengths.length;
+			
+			LOG.info(String.format("Hash bucket-length statistics: minNonEmpty = %d," +
+					" max = %d, avg = %.2f, stdDev = %.2f, empty = %d", 
+					minLen, maxLen, avgLen, stdDev, zeroLen));
+		}
 		
 		return t;
 	}
@@ -107,11 +140,10 @@ public class HashPostJoin implements Operator {
 		in.open(ctx);
 		
 		final Tuple first = buildHashTable(null, in, ctx);
-		
 		return new Cursor() {
 			
 			Tuple t = first;
-			int width = first != null ? first.getSize() : 0;
+			int width = first.getSize();
 			Tuple[] matches = null;
 			int numMatches;
 			int m = 0;
@@ -138,16 +170,27 @@ public class HashPostJoin implements Operator {
 					t = t.project(0, width - 1);
 
 					Atomic lKey = (Atomic) t.array()[leftKeyIndex];
-					matches = table.get(lKey);
-					if (matches != null) {
-						for (Tuple match : matches) {
-							for (int i = 0; i < t.getSize(); i++) {
-								match.array()[i] = t.array()[i];
-							}
-						}
-						numMatches = matches.length;
-						m = 0;
+//					System.out.println("Probing match for tuple " + t);
+					int b = getBucket(lKey);
+					Tuple[] probed = table[b];
+					if (lengths[b] == 0) {
+						t = in.next(ctx);
+						continue;
 					}
+
+					matches = new Tuple[probed.length];
+					int j = 0;
+					for (int i = 0; i < lengths[b]; i++) {
+						Atomic rKey = (Atomic) probed[i].array()[rightKeyIndex];
+						if (lKey.atomicCmp(rKey) == 0) {
+							for (int k = 0; k < t.getSize(); k++) {
+								probed[i].array()[k] = t.array()[k];
+							}
+							matches[j++] = probed[i];
+						}
+					}
+					numMatches = j;
+					m = 0;
 					t = in.next(ctx);
 				}
 				return matches[m++];
@@ -157,6 +200,15 @@ public class HashPostJoin implements Operator {
 			public void close(QueryContext ctx) {
 			}
 		};
+	}
+	
+	private final int getBucket(Atomic v)
+	{
+		// same hash was already used to create partitions in a single reduce input
+		// thus we have to scramble the hash some more
+		int hash = v.hashCode() >>> 12;
+		
+		return (hash & Integer.MAX_VALUE) % table.length;
 	}
 	
 	@Override
