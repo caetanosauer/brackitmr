@@ -23,51 +23,17 @@ public class HadoopTest {
 	private final static String ORDERS = HadoopTest.class.getResource("/csv/orders.csv").getPath();
 	private final static String CUSTOMER = HadoopTest.class.getResource("/csv/customer.csv").getPath();
 	
-	protected final static String DECL =
-			"declare %format('csv') %location('" + LINEITEM + "') collection lineitem" +
-			" as object(" +
-			"	orderkey as xs:int," +
-			"	partkey as xs:int," +
-			"	suppkey as xs:int," +
-			"	linenumber as xs:int," +
-			"	quantity as xs:int," +
-			"	extendedprice as xs:decimal," +
-			"	discount as xs:decimal," +
-			"	tax as xs:decimal," +
-			"	returnflag as xs:string," +
-			"	linestatus as xs:string," +
-			"	shipdate as xs:string," +
-			"	commitdate as xs:string," +
-			"	receiptdate as xs:string," +
-			"	shipinstruct as xs:string," +
-			"	shipmode as xs:string," +
-			"	comment as xs:string" +
-			"); " +
-			"" +
-			"declare %format('csv') %location('" + ORDERS + "') collection orders" +
-			" as object(" +
-			"	orderkey as xs:int," +
-			"	custkey as xs:int," +
-			"	orderstatus as xs:string," +
-			"	totalprice as xs:decimal," +
-			"	orderdate as xs:string," +
-			"	orderpriority as xs:string," +
-			"	clerk as xs:string," +
-			"	shippriority as xs:string," +
-			"	comment as xs:string" +
-			");" +
-			"" +
-			"declare %format('csv') %location('" + CUSTOMER + "') collection customer" +
-			" as object(" +
-			"   custkey as xs:int," +
-			"   name as xs:string," +
-			"   address as xs:string," +
-			"   nationkey as xs:int," +
-			"   phone as xs:string," +
-			"   acctbal as xs:double," +
-			"   mktsegment as xs:string," +
-			"   comment as xs:string" +
-			");";
+	private final static String JSON_TYPES = HadoopTest.class.getResource("/json/tpch_types.json").getPath();
+	
+	protected final static String IMPORT = 
+			"import json schema namespace tpch=\"http://brackit.org/ns/tpch\" at \"" + JSON_TYPES + "\"; \n";
+	
+	protected final static String DECL =  
+			"declare %format('csv') %location('" + LINEITEM + "') collection lineitem as object(tpch:lineitem); \n" +
+			"declare %format('csv') %location('" + ORDERS + "') collection orders as object(tpch:orders); \n" +
+			"declare %format('csv') %location('" + CUSTOMER + "') collection customer as object(tpch:customer); \n";
+	
+	protected final static String PROLOG = IMPORT + DECL;
 	
 	protected final static Configuration CONF = new Configuration();
 	
@@ -87,13 +53,13 @@ public class HadoopTest {
 	@Test
 	public void simpleScan() throws QueryException
 	{
-		run(DECL + "for $l in collection('lineitem') return $l");
+		run(PROLOG + "for $l in collection('lineitem') return $l");
 	}
 	
 	@Test
 	public void simpleFilter() throws QueryException
 	{
-		run(DECL +
+		run(PROLOG +
 				"for $l in collection('orders') " +
 				"where $l=>orderkey > 100 " +
 				"return $l");
@@ -102,7 +68,7 @@ public class HadoopTest {
 	@Test
 	public void simpleOrderBy() throws QueryException
 	{
-		run(DECL + 
+		run(PROLOG + 
 				"for $l in collection('lineitem') " +
 				"let $d := $l=>shipdate " +
 				"order by $d " +
@@ -112,7 +78,7 @@ public class HadoopTest {
 	@Test
 	public void simpleGroupBy() throws QueryException
 	{
-		run(DECL + 
+		run(PROLOG + 
 				"for $l in collection('lineitem') " +
 				"let $d := $l=>shipdate " +
 				"group by $d " +
@@ -122,7 +88,7 @@ public class HadoopTest {
 	@Test
 	public void simpleAggregation() throws QueryException
 	{
-		run(DECL + 
+		run(PROLOG + 
 				"for $l in collection('lineitem') " +
 				"let $d := $l=>shipdate " +
 				"group by $d " +
@@ -132,7 +98,7 @@ public class HadoopTest {
 	@Test
 	public void simpleMultiStage() throws QueryException
 	{
-		run(DECL + 
+		run(PROLOG + 
 				"for $l in collection('lineitem') " +
 				"let $d := $l=>shipdate " +
 				"group by $d " +
@@ -145,7 +111,7 @@ public class HadoopTest {
 	@Test
 	public void simpleJoin() throws QueryException
 	{
-		run(DECL + 
+		run(PROLOG + 
 				"for $l in collection('lineitem') " +
 				"for $o in collection('orders') " +
 				"where $l=>orderkey eq $o=>orderkey " +
@@ -155,7 +121,7 @@ public class HadoopTest {
 	@Test
 	public void simpleJoinFilter() throws QueryException
 	{
-		run(DECL + 
+		run(PROLOG + 
 				"for $l in collection('lineitem') " +
 				"for $o in collection('orders') " +
 				"where $l=>orderkey eq $o=>orderkey " +
@@ -168,7 +134,7 @@ public class HadoopTest {
 	@Test
 	public void joinGroupBy() throws QueryException
 	{
-		run(DECL +
+		run(PROLOG +
 				"for $l in collection('lineitem') " +
 				"for $o in collection('orders') " +
 				"where $l=>orderkey eq $o=>orderkey " +
@@ -180,7 +146,7 @@ public class HadoopTest {
 	@Test
 	public void joinGroupByOrderBy() throws QueryException
 	{
-		run(DECL +
+		run(PROLOG +
 				"for $l in collection('lineitem') " +
 				"for $o in collection('orders') " +
 				"where $l=>orderkey eq $o=>orderkey " +
@@ -194,7 +160,7 @@ public class HadoopTest {
 	@Test
 	public void groupByOrderByDecimal() throws QueryException
 	{
-		run(DECL +
+		run(PROLOG +
 				"for $l in collection('lineitem') " +
 				"let $orderkey := $l=>orderkey " +
 				"group by $orderkey " +
@@ -206,7 +172,7 @@ public class HadoopTest {
 	@Test
 	public void tpch03() throws QueryException
 	{
-		run(DECL +
+		run(PROLOG +
 				"for" +
 				"  $c in collection('customer'), " +
 				"  $o in collection('orders'), " +

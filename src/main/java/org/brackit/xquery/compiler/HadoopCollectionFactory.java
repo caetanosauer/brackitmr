@@ -1,6 +1,6 @@
 package org.brackit.xquery.compiler;
 
-import org.brackit.hadoop.io.HadoopCSVCollection;
+import org.brackit.hadoop.io.collection.HadoopCSVCollection;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.compiler.analyzer.CollectionFactory;
 import org.brackit.xquery.xdm.Collection;

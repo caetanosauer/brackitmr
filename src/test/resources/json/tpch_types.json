@@ -1,0 +1,50 @@
+[
+	{
+		"name": "lineitem",
+		"schema": {
+			"orderkey": "xs:int",
+			"partkey": "xs:int",
+			"suppkey": "xs:int",
+			"linenumber": "xs:int",
+			"quantity": "xs:int",
+			"extendedprice": "xs:decimal",
+			"discount": "xs:decimal",
+			"tax": "xs:decimal",
+			"returnflag": "xs:string",
+			"linestatus": "xs:string",
+			"shipdate": "xs:string",
+			"commitdate": "xs:string",
+			"receiptdate": "xs:string",
+			"shipinstruct": "xs:string",
+			"shipmode": "xs:string",
+			"comment": "xs:string"
+		}
+	},
+	{
+		"name": "orders",
+		"schema": {
+			"orderkey": "xs:int",
+			"custkey": "xs:int",
+			"orderstatus": "xs:string",
+			"totalprice": "xs:decimal",
+			"orderdate": "xs:string",
+			"orderpriority": "xs:string",
+			"clerk": "xs:string",
+			"shippriority": "xs:string",
+			"comment": "xs:string"
+		}
+	},
+	{
+		"name": "customer",
+		"schema": {
+			"custkey": "xs:int",
+			"name": "xs:string",
+			"address": "xs:string",
+			"nationkey": "xs:int",
+			"phone": "xs:string",
+			"acctbal": "xs:double",
+			"mktsegment": "xs:string",
+			"comment": "xs:string"
+		}
+	}
+]
