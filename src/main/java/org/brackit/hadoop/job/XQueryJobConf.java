@@ -47,9 +47,8 @@ import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
-import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.brackit.hadoop.collection.HadoopCollection;
 import org.brackit.hadoop.io.RangeInputFormat;
-import org.brackit.hadoop.io.collection.HadoopCSVCollection;
 import org.brackit.hadoop.runtime.DummySort;
 import org.brackit.xquery.Tuple;
 import org.brackit.xquery.compiler.AST;
@@ -286,9 +285,8 @@ public class XQueryJobConf extends JobConf {
 				throw new IOException("Could not find declared collection " + collName);
 			}
 
-			if (coll instanceof HadoopCSVCollection) {
-				addInputFormat(TextInputFormat.class.getName());
-				addInputPath(((HadoopCSVCollection) coll).getLocation());
+			if (coll instanceof HadoopCollection) {
+				((HadoopCollection) coll).initHadoop(this);
 			}
 			else {
 				throw new IOException("Collection of type " + coll.getClass().getSimpleName() +
@@ -301,7 +299,7 @@ public class XQueryJobConf extends JobConf {
 		}
 	}
 	
-	private void addInputFormat(String className)
+	public void addInputFormat(String className)
 	{
 		String formats = get(PROP_INPUT_FORMATS);
 		if (formats == null) {
@@ -312,7 +310,7 @@ public class XQueryJobConf extends JobConf {
 		}
 	}
 	
-	private void addInputPath(String path)
+	public void addInputPath(String path)
 	{
 		String paths = get(PROP_INPUT_PATHS);
 		if (paths == null) {

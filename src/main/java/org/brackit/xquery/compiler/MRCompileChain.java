@@ -76,7 +76,7 @@ public class MRCompileChain extends CompileChain implements Configurable {
 		}
 		
 		// ANALYZE
-		PrologAnalyzer.collectionFactory = new HadoopCollectionFactory();
+		PrologAnalyzer.collectionFactory = new HadoopCollectionFactory(conf);
 		Analyzer analyzer = new Analyzer(resolver, baseURI);
 		Targets targets = analyzer.analyze(parsed);		
 		Map<QNm, Str> options = targets.getStaticContext().getOptions();

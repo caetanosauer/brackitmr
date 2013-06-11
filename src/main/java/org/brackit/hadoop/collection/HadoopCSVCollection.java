@@ -25,14 +25,17 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.hadoop.io.collection;
+package org.brackit.hadoop.collection;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.Map;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.MapContext;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.brackit.hadoop.job.XQueryJobConf;
 import org.brackit.hadoop.runtime.HadoopQueryContext;
 import org.brackit.xquery.ErrorCode;
 import org.brackit.xquery.QueryContext;
@@ -51,7 +54,7 @@ import org.brackit.xquery.xdm.Sequence;
 import org.brackit.xquery.xdm.collection.CSVCollection;
 import org.brackit.xquery.xdm.type.ItemType;
 
-public class HadoopCSVCollection extends CSVCollection {
+public class HadoopCSVCollection extends CSVCollection implements HadoopCollection {
 
 	public HadoopCSVCollection(String name, String location, String options, ItemType type)
 			throws QueryException
@@ -135,6 +138,13 @@ public class HadoopCSVCollection extends CSVCollection {
 				};
 			}
 		};
+	}
+
+	@Override
+	public void initHadoop(XQueryJobConf jobConf) throws IOException
+	{
+		jobConf.addInputFormat(TextInputFormat.class.getName());
+		jobConf.addInputPath(getLocation());
 	}
 
 }

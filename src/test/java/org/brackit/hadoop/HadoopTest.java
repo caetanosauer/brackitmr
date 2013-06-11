@@ -14,9 +14,9 @@ import org.junit.Test;
 
 public class HadoopTest {
 
-	private final static boolean IS_LOCAL = true; 
+	private final static boolean IS_LOCAL = false; 
 	
-	private final static String HDFS = "hdfs://node6:9001/tpch/1GB/";
+	private final static String HDFS = "hdfs://node6:9000/tpch/1GB/";
 	private final static String LINEITEM = IS_LOCAL
 				? HadoopTest.class.getResource("/csv/lineitem.csv").getPath()
 				: HDFS + "lineitem.tbl";
@@ -36,6 +36,15 @@ public class HadoopTest {
 	protected final static String PROLOG = IMPORT + DECL;
 	
 	protected final static Configuration CONF = new Configuration();
+	
+	static {
+		// NOTE: run: "mvn -DskipTests install" on the brackitmr folder (Linux only)
+		if (!IS_LOCAL) {
+			CONF.set("mapred.jar", System.getProperty("user.home") +
+					"/.m2/repository/org/brackit/brackitmr/0.0.1/brackitmr-0.0.1-jar-with-dependencies.jar");
+		}
+	}
+	
 	
 	protected void run(String query) throws QueryException
 	{
