@@ -40,18 +40,18 @@ import org.brackit.hadoop.runtime.HadoopQueryContext;
 import org.brackit.xquery.ErrorCode;
 import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
-import org.brackit.xquery.atomic.Atomic;
-import org.brackit.xquery.atomic.QNm;
-import org.brackit.xquery.record.ArrayRecord;
-import org.brackit.xquery.sequence.BaseIter;
-import org.brackit.xquery.sequence.LazySequence;
+import org.brackit.xquery.collection.CSVCollection;
 import org.brackit.xquery.util.csv.CSVFileIter;
 import org.brackit.xquery.util.csv.ComparisonPred;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Item;
 import org.brackit.xquery.xdm.Iter;
 import org.brackit.xquery.xdm.Sequence;
-import org.brackit.xquery.xdm.collection.CSVCollection;
+import org.brackit.xquery.xdm.atomic.Atomic;
+import org.brackit.xquery.xdm.atomic.QNm;
+import org.brackit.xquery.xdm.record.ArrayRecord;
+import org.brackit.xquery.xdm.sequence.BaseIter;
+import org.brackit.xquery.xdm.sequence.LazySequence;
 import org.brackit.xquery.xdm.type.ItemType;
 
 public class HadoopCSVCollection extends CSVCollection implements HadoopCollection {
@@ -141,7 +141,7 @@ public class HadoopCSVCollection extends CSVCollection implements HadoopCollecti
 	}
 
 	@Override
-	public void initHadoop(XQueryJobConf jobConf) throws IOException
+	public void initHadoop(XQueryJobConf jobConf, Map<String, Serializable> properties) throws IOException
 	{
 		jobConf.addInputFormat(TextInputFormat.class.getName());
 		jobConf.addInputPath(getLocation());
