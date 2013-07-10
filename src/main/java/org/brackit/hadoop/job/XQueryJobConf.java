@@ -253,15 +253,16 @@ public class XQueryJobConf extends JobConf {
 				"org.brackit.hadoop.io.KeySerialization",
 				get("io.serializations"));
 		
-		String jobTracker = Cfg.asString(PROP_JOB_TRACKER, null);
-		if (jobTracker != null) {
-			set(PROP_JOB_TRACKER, jobTracker);
-		}
-		
-		String fsName = Cfg.asString(PROP_FS_NAME, null);
-		if (fsName != null) {
-			set(PROP_FS_NAME, fsName);
-		}
+		// Confirm that this is not needed!
+//		String jobTracker = Cfg.asString(PROP_JOB_TRACKER, null);
+//		if (jobTracker != null) {
+//			set(PROP_JOB_TRACKER, jobTracker);
+//		}
+//		
+//		String fsName = Cfg.asString(PROP_FS_NAME, null);
+//		if (fsName != null) {
+//			set(PROP_FS_NAME, fsName);
+//		}
 	}
 	
 	private void parseForBind(AST bind) throws IOException
@@ -286,11 +287,11 @@ public class XQueryJobConf extends JobConf {
 			}
 
 			if (coll instanceof HadoopCollection) {
-				((HadoopCollection) coll).initHadoop(this);
+				((HadoopCollection) coll).initHadoop(this, boundSeq.getProperties());
 			}
 			else {
-				throw new IOException("Collection of type " + coll.getClass().getSimpleName() +
-						" is not supported");
+//				throw new IOException("Collection of type " + coll.getClass().getSimpleName() +
+//						" is not supported");
 			}
 		}
 		else {
@@ -327,13 +328,19 @@ public class XQueryJobConf extends JobConf {
 	{
 		try {
 			String formatStr = get(PROP_INPUT_FORMATS);
-			String[] classes = formatStr.split(",");
-			List<Class<? extends InputFormat<?, ?>>> result =
-					new ArrayList<Class<? extends InputFormat<?,?>>>();
-			for (String className : classes) {
-				result.add((Class<? extends InputFormat<?, ?>>) Class.forName(className));
+			if (formatStr != null) {
+				String[] classes = formatStr.split(",");
+				List<Class<? extends InputFormat<?, ?>>> result =
+						new ArrayList<Class<? extends InputFormat<?,?>>>();
+				for (String className : classes) {
+					result.add((Class<? extends InputFormat<?, ?>>) Class.forName(className));
+				}
+				return result;
 			}
-			return result;
+			else {
+				return new ArrayList<Class<? extends InputFormat<?,?>>>();
+			}
+
 		}
 		catch (Exception e) {
 			throw new IOException(e);
