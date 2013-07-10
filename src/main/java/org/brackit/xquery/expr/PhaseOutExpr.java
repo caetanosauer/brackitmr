@@ -9,14 +9,14 @@ import org.brackit.xquery.ErrorCode;
 import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.Tuple;
-import org.brackit.xquery.atomic.Bool;
-import org.brackit.xquery.atomic.Int32;
 import org.brackit.xquery.operator.Cursor;
 import org.brackit.xquery.operator.Operator;
 import org.brackit.xquery.util.ExprUtil;
 import org.brackit.xquery.xdm.Expr;
 import org.brackit.xquery.xdm.Item;
 import org.brackit.xquery.xdm.Sequence;
+import org.brackit.xquery.xdm.atomic.Bool;
+import org.brackit.xquery.xdm.atomic.Int32;
 
 public class PhaseOutExpr implements Expr {
 

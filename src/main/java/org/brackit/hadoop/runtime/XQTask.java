@@ -38,8 +38,6 @@ import org.brackit.hadoop.io.RangeInputSplit;
 import org.brackit.hadoop.job.XQueryJobConf;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.Tuple;
-import org.brackit.xquery.atomic.Atomic;
-import org.brackit.xquery.atomic.Int32;
 import org.brackit.xquery.compiler.AST;
 import org.brackit.xquery.compiler.Target;
 import org.brackit.xquery.compiler.Targets;
@@ -48,6 +46,8 @@ import org.brackit.xquery.compiler.XQExt;
 import org.brackit.xquery.compiler.translator.MRTranslator;
 import org.brackit.xquery.operator.TupleImpl;
 import org.brackit.xquery.xdm.Expr;
+import org.brackit.xquery.xdm.atomic.Atomic;
+import org.brackit.xquery.xdm.atomic.Int32;
 
 public class XQTask {
 

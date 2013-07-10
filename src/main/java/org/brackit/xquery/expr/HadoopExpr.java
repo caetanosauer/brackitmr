@@ -39,16 +39,18 @@ import org.brackit.xquery.ErrorCode;
 import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.Tuple;
-import org.brackit.xquery.atomic.Bool;
+import org.brackit.xquery.XQuery;
 import org.brackit.xquery.compiler.AST;
 import org.brackit.xquery.compiler.XQ;
 import org.brackit.xquery.compiler.XQExt;
 import org.brackit.xquery.module.StaticContext;
 import org.brackit.xquery.util.Cfg;
 import org.brackit.xquery.util.ExprUtil;
+import org.brackit.xquery.util.dot.DotUtil;
 import org.brackit.xquery.xdm.Expr;
 import org.brackit.xquery.xdm.Item;
 import org.brackit.xquery.xdm.Sequence;
+import org.brackit.xquery.xdm.atomic.Bool;
 
 public final class HadoopExpr implements Expr {
 
@@ -125,6 +127,10 @@ public final class HadoopExpr implements Expr {
 		jobConf.parseInputsAndOutputs();
 		XQueryJob job = new XQueryJob(jobConf);
 		job.setJarByClass(HadoopExpr.class);
+		
+		if (XQuery.DEBUG) {
+			DotUtil.drawDotToFile(root.flworDot(), XQuery.DEBUG_DIR, "plan_job" + seq);
+		}
 		
 		if (DELETE_EXISTING) {
 			Path outPath = new Path(jobConf.getOutputDir());

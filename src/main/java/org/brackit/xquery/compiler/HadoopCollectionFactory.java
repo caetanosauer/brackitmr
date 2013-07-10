@@ -1,7 +1,7 @@
 package org.brackit.xquery.compiler;
 
 import org.apache.hadoop.conf.Configuration;
-import org.brackit.hadoop.collection.HBaseCollection;
+import org.brackit.hadoop.collection.HBaseLocalCollection;
 import org.brackit.hadoop.collection.HadoopCSVCollection;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.compiler.analyzer.CollectionFactory;
@@ -25,7 +25,7 @@ public class HadoopCollectionFactory extends CollectionFactory {
 			return new HadoopCSVCollection(name, location, options, type);
 		}
 		else if (format.equals("hbase")) {
-			return new HBaseCollection(conf, name, location, options, type);
+			return new HBaseLocalCollection(name, location, options, type);
 		}
 		else if (format.equals("mongo")) {
 			

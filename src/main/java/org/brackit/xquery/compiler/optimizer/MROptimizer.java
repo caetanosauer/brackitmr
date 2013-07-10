@@ -30,12 +30,12 @@ package org.brackit.xquery.compiler.optimizer;
 import java.util.Map;
 
 import org.brackit.xquery.QueryException;
-import org.brackit.xquery.atomic.QNm;
-import org.brackit.xquery.atomic.Str;
 import org.brackit.xquery.compiler.AST;
 import org.brackit.xquery.compiler.optimizer.walker.ReplaceAvgFunction;
 import org.brackit.xquery.compiler.optimizer.walker.ShuffleRewrite;
 import org.brackit.xquery.module.StaticContext;
+import org.brackit.xquery.xdm.atomic.QNm;
+import org.brackit.xquery.xdm.atomic.Str;
 
 public class MROptimizer extends TopDownOptimizer {
 

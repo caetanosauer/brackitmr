@@ -34,8 +34,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.brackit.hadoop.job.XQueryJobConf;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.XQuery;
-import org.brackit.xquery.atomic.QNm;
-import org.brackit.xquery.atomic.Str;
 import org.brackit.xquery.compiler.analyzer.Analyzer;
 import org.brackit.xquery.compiler.analyzer.PrologAnalyzer;
 import org.brackit.xquery.compiler.optimizer.MROptimizer;
@@ -44,6 +42,8 @@ import org.brackit.xquery.compiler.translator.MRTranslator;
 import org.brackit.xquery.module.StaticContext;
 import org.brackit.xquery.util.dot.DotUtil;
 import org.brackit.xquery.xdm.Expr;
+import org.brackit.xquery.xdm.atomic.QNm;
+import org.brackit.xquery.xdm.atomic.Str;
 
 
 public class MRCompileChain extends CompileChain implements Configurable {
@@ -84,7 +84,8 @@ public class MRCompileChain extends CompileChain implements Configurable {
 		// OPTIMIZE
 		targets.optimize(getOptimizer(options));
 		if (XQuery.DEBUG) {
-			DotUtil.drawDotToFile(parsed.dot(), XQuery.DEBUG_DIR, "xquery");
+			DotUtil.drawDotToFile(parsed.dot(), XQuery.DEBUG_DIR, "mr_xquery");
+			DotUtil.drawDotToFile(parsed.flworDot(), XQuery.DEBUG_DIR, "mr_plan");
 		}
 		
 		StaticContext sctx = targets.getStaticContext();

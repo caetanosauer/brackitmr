@@ -33,8 +33,6 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.brackit.xquery.ErrorCode;
 import org.brackit.xquery.QueryException;
-import org.brackit.xquery.atomic.QNm;
-import org.brackit.xquery.atomic.Str;
 import org.brackit.xquery.compiler.AST;
 import org.brackit.xquery.compiler.XQ;
 import org.brackit.xquery.compiler.XQExt;
@@ -48,6 +46,8 @@ import org.brackit.xquery.operator.HashPostJoin;
 import org.brackit.xquery.operator.TupleImpl;
 import org.brackit.xquery.xdm.Expr;
 import org.brackit.xquery.xdm.Sequence;
+import org.brackit.xquery.xdm.atomic.QNm;
+import org.brackit.xquery.xdm.atomic.Str;
 import org.brackit.xquery.xdm.type.SequenceType;
 
 public class MRTranslator extends BottomUpTranslator {

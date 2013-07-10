@@ -38,11 +38,11 @@ import org.apache.hadoop.io.serializer.Serialization;
 import org.apache.hadoop.io.serializer.Serializer;
 import org.brackit.hadoop.runtime.XQGroupingKey;
 import org.brackit.xquery.QueryException;
-import org.brackit.xquery.atomic.Atomic;
-import org.brackit.xquery.atomic.Int32;
 import org.brackit.xquery.util.io.XDMInputStream;
 import org.brackit.xquery.util.io.XDMOutputStream;
 import org.brackit.xquery.xdm.Type;
+import org.brackit.xquery.xdm.atomic.Atomic;
+import org.brackit.xquery.xdm.atomic.Int32;
 import org.brackit.xquery.xdm.type.AtomicType;
 import org.brackit.xquery.xdm.type.SequenceType;
 

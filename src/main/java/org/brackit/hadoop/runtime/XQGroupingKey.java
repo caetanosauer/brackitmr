@@ -30,10 +30,10 @@ package org.brackit.hadoop.runtime;
 import org.brackit.xquery.ErrorCode;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.Tuple;
-import org.brackit.xquery.atomic.Atomic;
-import org.brackit.xquery.atomic.Int32;
 import org.brackit.xquery.xdm.Iter;
 import org.brackit.xquery.xdm.Sequence;
+import org.brackit.xquery.xdm.atomic.Atomic;
+import org.brackit.xquery.xdm.atomic.Int32;
 
 public class XQGroupingKey implements Comparable<XQGroupingKey> {
 

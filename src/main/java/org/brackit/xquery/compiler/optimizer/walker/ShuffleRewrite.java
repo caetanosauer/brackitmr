@@ -31,11 +31,11 @@ import java.util.ArrayList;
 import java.util.Stack;
 
 import org.brackit.hadoop.job.XQueryJobConf;
-import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.compiler.AST;
 import org.brackit.xquery.compiler.XQ;
 import org.brackit.xquery.compiler.XQExt;
 import org.brackit.xquery.util.Cfg;
+import org.brackit.xquery.xdm.atomic.QNm;
 import org.brackit.xquery.xdm.type.SequenceType;
 
 public class ShuffleRewrite extends Walker {

@@ -39,7 +39,6 @@ import org.brackit.xquery.ErrorCode;
 import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.Tuple;
-import org.brackit.xquery.atomic.Bool;
 import org.brackit.xquery.operator.Cursor;
 import org.brackit.xquery.operator.Operator;
 import org.brackit.xquery.util.csv.CSVFileIter;
@@ -49,6 +48,7 @@ import org.brackit.xquery.xdm.Expr;
 import org.brackit.xquery.xdm.Item;
 import org.brackit.xquery.xdm.OperationNotSupportedException;
 import org.brackit.xquery.xdm.Sequence;
+import org.brackit.xquery.xdm.atomic.Bool;
 
 public class HDFSOutputExpr implements Expr {
 

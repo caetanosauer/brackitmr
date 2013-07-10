@@ -27,10 +27,10 @@
  */
 package org.brackit.xquery.compiler.optimizer.walker;
 
-import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.compiler.AST;
 import org.brackit.xquery.compiler.XQ;
 import org.brackit.xquery.module.Namespaces;
+import org.brackit.xquery.xdm.atomic.QNm;
 
 public class ReplaceAvgFunction extends Walker {
 
