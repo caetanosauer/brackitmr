@@ -69,10 +69,18 @@ public class XQueryJob extends Job {
 		if (hasShuffle) {
 			setMapOutputKeyClass(XQGroupingKey.class);
 			setMapOutputValueClass(TupleImpl.class);
-			setGroupingComparatorClass(isJoin ? XQJoinKeyComparator.class : 
-				skipSort ? DummyComparator.class : XQRawKeyComparator.class);
-			setSortComparatorClass(isJoin ? XQJoinKeyComparator.class : 
-				skipSort ? DummyComparator.class : XQRawKeyComparator.class);
+			
+			/*
+			 *  TODO: this does not work because mergers also use the comparator class
+			 *  (not sure about grouping comparator though)
+			 */
+//			setGroupingComparatorClass(isJoin ? XQJoinKeyComparator.class : 
+//				skipSort ? DummyComparator.class : XQRawKeyComparator.class);
+//			setSortComparatorClass(isJoin ? XQJoinKeyComparator.class : 
+//				skipSort ? DummyComparator.class : XQRawKeyComparator.class);
+			
+			setSortComparatorClass(isJoin ? XQJoinKeyComparator.class : XQRawKeyComparator.class);
+			setGroupingComparatorClass(isJoin ? XQJoinKeyComparator.class : XQRawKeyComparator.class);
 			if (isJoin) setPartitionerClass(XQJoinKeyPartitioner.class);
 		}
 		else {
