@@ -93,21 +93,6 @@ public class MRTranslator extends BottomUpTranslator {
 		return super.anyOp(node);
 	}
 	
-	private Operator start(AST node) throws QueryException
-	{
-		if (node.getChildCount() == 0) {
-			Integer shift = (Integer) node.getProperty("shift");
-			if (shift != null) {
-				return new Start(new TupleImpl(new Sequence[shift]));
-			}
-			else {
-				return new Start();
-			}
-		} else {
-			return anyOp(node.getLastChild());
-		}
-	}
-	
 	protected Expr phaseOut(AST node) throws QueryException
 	{
 		int[] indexes = new int[node.getChildCount() - 1];
