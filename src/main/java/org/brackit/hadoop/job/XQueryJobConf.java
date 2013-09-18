@@ -101,6 +101,8 @@ public class XQueryJobConf extends JobConf {
 	public static final String PROP_HASH_GROUP_BY = "org.brackit.hadoop.hashGroupBy";
 	public static final String PROP_HASH_JOIN_PARTITIONS = "org.brackit.hadoop.hashJoinPartitions";
 	public static final String PROP_COMPUTE_HASH_TABLE_STATS = "org.brackit.hadoop.computeHashTableStats";
+	public static final String PROP_REPLICATE_TO_DISTR_CACHE = "org.brackit,hadoop.replicateToDistrCache";
+	public static final String PROP_REPLICATE_THRESHOLD = "org.brackit,hadoop.replicateThreshold";
 	
 	public static final String PROP_MAPPER_SORT = "map.sort.class";
 	public static final String PROP_JOB_TRACKER = "mapred.job.tracker";

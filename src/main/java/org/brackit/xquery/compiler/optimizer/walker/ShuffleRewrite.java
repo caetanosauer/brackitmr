@@ -73,6 +73,12 @@ public class ShuffleRewrite extends Walker {
 			return node;
 		}
 		
+		if (node.checkProperty("fr")) {
+			// we know it's a fragment-replicate join, so we do not convert it into a shuffle
+			// Is there anything special to be done in this case or can we just return?
+			return node;
+		}
+		
 		AST left = node.getChild(0);
 		AST right = node.getChild(1);
 		AST parent = node.getParent();

@@ -33,6 +33,7 @@ import org.brackit.xquery.QueryException;
 import org.brackit.xquery.compiler.AST;
 import org.brackit.xquery.compiler.optimizer.walker.ReplaceAvgFunction;
 import org.brackit.xquery.compiler.optimizer.walker.ShuffleRewrite;
+import org.brackit.xquery.compiler.optimizer.walker.SwitchJoinType;
 import org.brackit.xquery.module.StaticContext;
 import org.brackit.xquery.xdm.atomic.QNm;
 import org.brackit.xquery.xdm.atomic.Str;
@@ -55,6 +56,7 @@ public class MROptimizer extends TopDownOptimizer {
 
 		public AST rewrite(StaticContext sctx, AST ast) throws QueryException
 		{
+			ast = new SwitchJoinType().walk(ast);
 			ast = new ShuffleRewrite().walk(ast);
 			return ast;
 		}
