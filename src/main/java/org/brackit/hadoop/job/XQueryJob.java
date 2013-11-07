@@ -36,7 +36,6 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.brackit.hadoop.io.BrackitInputFormat;
-import org.brackit.hadoop.runtime.DummyComparator;
 import org.brackit.hadoop.runtime.XQGroupingKey;
 import org.brackit.hadoop.runtime.XQJoinKeyComparator;
 import org.brackit.hadoop.runtime.XQJoinKeyPartitioner;
@@ -53,6 +52,7 @@ public class XQueryJob extends Job {
 	private boolean hasShuffle = false;
 	private boolean isJoin = false;
 	private boolean skipSort = false;
+	private boolean isIdMapper = false;
 	
 	public XQueryJob(XQueryJobConf conf) throws IOException
 	{
@@ -102,6 +102,9 @@ public class XQueryJob extends Job {
 			skipSort = node.checkProperty("skipSort");
 			for (int i = 0; i < node.getChildCount(); i++) {
 				walkAst(node.getChild(i));
+			}
+			if (node.getChildCount() == 0) {
+				isIdMapper = true;
 			}
 		}
 		else {

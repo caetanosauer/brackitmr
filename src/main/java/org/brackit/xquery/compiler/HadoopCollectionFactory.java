@@ -14,10 +14,10 @@ public class HadoopCollectionFactory extends CollectionFactory {
 	private final Configuration conf;
 	
 	private static final boolean REPLICATE_TO_DISTR_CACHE =
-			Cfg.asBool(XQueryJobConf.PROP_REPLICATE_TO_DISTR_CACHE);
+			Cfg.asBool(XQueryJobConf.PROP_REPLICATE_TO_DISTR_CACHE, false);
 	
 	private static final long REPLICATE_THRESHOLD =
-			Cfg.asLong(XQueryJobConf.PROP_REPLICATE_THRESHOLD);
+			Cfg.asLong(XQueryJobConf.PROP_REPLICATE_THRESHOLD, 1000000);
 	
 	public HadoopCollectionFactory(Configuration conf)
 	{

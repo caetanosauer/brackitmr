@@ -1,7 +1,8 @@
 package org.brackit.hadoop;
 
-import java.io.FileNotFoundException;
-import java.io.PrintWriter;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 
 import org.apache.hadoop.conf.Configuration;
 import org.brackit.xquery.QueryContext;
@@ -9,12 +10,13 @@ import org.brackit.xquery.QueryException;
 import org.brackit.xquery.XQuery;
 import org.brackit.xquery.compiler.CompileChain;
 import org.brackit.xquery.compiler.MRCompileChain;
+import org.brackit.xquery.xdm.DocumentException;
 import org.junit.Test;
 
 
 public class HadoopTest {
 
-	private final static boolean IS_LOCAL = false; 
+	private final static boolean IS_LOCAL = true; 
 	
 	private final static String HDFS = "hdfs://node6:9000/tpch/1GB/";
 	private final static String LINEITEM = IS_LOCAL
@@ -32,6 +34,7 @@ public class HadoopTest {
 			"declare %format('csv') %location('" + LINEITEM + "') collection lineitem as object(tpch:lineitem); \n" +
 			"declare %format('csv') %location('" + ORDERS + "') collection orders as object(tpch:orders); \n" +
 			"declare %format('csv') %location('" + CUSTOMER + "') collection customer as object(tpch:customer); \n";
+//			"declare %format('hbase') %location('test') collection test as item()*; \n";
 	
 	protected final static String PROLOG = IMPORT + DECL;
 	
@@ -48,15 +51,52 @@ public class HadoopTest {
 	
 	protected void run(String query) throws QueryException
 	{
-//		runBrackit(query);
+		String methodName = Thread.currentThread().getStackTrace()[2].getMethodName();
+		String old = XQuery.DEBUG_DIR;
+		XQuery.DEBUG_DIR = XQuery.DEBUG_DIR + methodName + "/";
+		new File(XQuery.DEBUG_DIR).mkdirs();
 		XQuery xq = new XQuery(new MRCompileChain(CONF), query);
 		xq.evaluate(new QueryContext());
+		XQuery.DEBUG_DIR = old;
 	}
 	
 	protected void runBrackit(String query) throws QueryException
 	{
 		XQuery xq = new XQuery(new CompileChain(), query);
+		xq.setPrettyPrint(true);
 		xq.serialize(new QueryContext(), System.out);
+	}
+	
+	public void adHoc(String filename, boolean local) throws QueryException
+	{
+		StringBuilder query = new StringBuilder();
+		try {
+			String f = "/home/csauer/tmp/waim/" + filename;
+			BufferedReader file = new BufferedReader(new FileReader(f));
+			boolean first = true;
+
+			String line;
+			while ((line = file.readLine()) != null) {
+				if (!first)
+					query.append(' ');
+				query.append(line);
+				first = false;
+			}
+			file.close();
+			String q = query.toString();
+			if (local) {
+				String old = XQuery.DEBUG_DIR;
+				XQuery.DEBUG_DIR = XQuery.DEBUG_DIR + "adHoc/";
+				runBrackit(q);
+				XQuery.DEBUG_DIR = old;
+			}
+			else {
+				run(q);
+			}
+		}
+		catch (Exception e) {
+			throw new DocumentException(e);
+		}
 	}
 	
 	@Test
@@ -71,6 +111,15 @@ public class HadoopTest {
 		run(PROLOG +
 				"for $l in collection('orders') " +
 				"where $l=>orderkey > 100 " +
+				"return $l");
+	}
+	
+	@Test
+	public void simpleFilterCombined() throws QueryException
+	{
+		run(PROLOG +
+				"for $l in collection('orders') " +
+				"where $l=>orderkey > 100 and $l=>shipdate > '1998-01-01' " +
 				"return $l");
 	}
 	
@@ -216,27 +265,35 @@ public class HadoopTest {
 	public void rangeExpr() throws QueryException
 	{
 		runBrackit(
-			"for $i in 1 to 100000000 " +
+			"for $i in 1 to 1000000 " +
 			"let $x := bit:random(0,1) " +
 			"let $y := bit:random(0,1) " +
 			"let $d := math:sqrt($x * $x + $y * $y) " +
 			"where $d < 1.0 " +
 			"let $dummy := 1 " +
 			"group by $dummy " +
-			"return 4 * count($d) div 100000000"
+			"return 4 * count($d) div 1000000"
 			);
 	}
 	
-	@Test
-	public void dblp() throws QueryException, FileNotFoundException
-	{
-		XQuery xq = new XQuery(
-				"let $dblp := doc('/home/csauer/runtime/dblp.xml')/dblp " +
-				"for $x in $dblp/article " +
-				"return $x "
-				);
-		xq.serialize(new QueryContext(), new PrintWriter("/home/csauer/runtime/article.xml"));
-		
-	}
+//	@Test
+//	public void hbaseScan() throws QueryException
+//	{
+//		run(PROLOG +
+//				"for $t in collection('test')" +
+//				"return $t");
+//	}
+//	
+//	@Test
+//	public void dblp() throws QueryException, FileNotFoundException
+//	{
+//		XQuery xq = new XQuery(
+//				"let $dblp := doc('/home/csauer/runtime/dblp.xml')/dblp " +
+//				"for $x in $dblp/article " +
+//				"return $x "
+//				);
+//		xq.serialize(new QueryContext(), new PrintWriter("/home/csauer/runtime/article.xml"));
+//		
+//	}
 	
 }
