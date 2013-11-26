@@ -81,6 +81,7 @@ public class XQueryJobConf extends JobConf {
 			}
 		}
 		catch (IOException e) {
+			throw new RuntimeException("Unexpected IOException when reading config file", e);
 		}
 	}
 	

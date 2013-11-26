@@ -63,7 +63,7 @@ import org.brackit.xquery.xdm.atomic.Int32;
 
 public class XQTask {
 	
-	private static boolean RAW_ID_MAPPER = Cfg.asBool(XQueryJobConf.PROP_RAW_ID_MAPPER, true);
+	private static boolean RAW_ID_MAPPER = Cfg.asBool(XQueryJobConf.PROP_RAW_ID_MAPPER, false);
 
 	public static class XQMapper<K1,V1,K2,V2> extends Mapper<K1,V1,K2,V2> {
 
@@ -173,13 +173,19 @@ public class XQTask {
 		@SuppressWarnings({ "rawtypes", "deprecation" })
 		private void runRawIdMapper(Mapper.Context context, AST node) throws IOException, InterruptedException
 		{
+			/*
+			 * FIXME
+			 * this is all wrong, because output commiter has nothing to to with 
+			 * output collector (which is a RecordWriter). The output collector
+			 * has no getter method, and is therefore inaccessible!
+			 */
 			InputSplit split = context.getInputSplit();
 			FileOutputCommitter commiter = (FileOutputCommitter) context.getOutputCommitter();
 
 			/*
 			 * Copied from SequenceFileRecordReader and SequenceFile.Reader
 			 * The idea is to skip the deserialization/serialization process
-			 * by reading adn writing keys and values driectly with their raw
+			 * by reading and writing keys and values driectly with their raw
 			 * byte format.
 			 *
 			 * This code is temporary -- a lot of trouble can occur because
@@ -194,12 +200,21 @@ public class XQTask {
 				Configuration conf = context.getConfiguration();    
 				Path path = fileSplit.getPath();
 				FileSystem fs = path.getFileSystem(conf);
+				System.out.println(path);
 				in = fs.open(path);
+				
+				
 				
 				// SequenceFile.Writer()
 				int bufferSize = conf.getInt("io.file.buffer.size", 4096);
 				Path outPath = commiter.getWorkPath();
+				System.out.println(outPath);
 				out = fs.create(outPath, true, bufferSize, (short) 1, fs.getDefaultBlockSize(), null);
+				
+				
+				// TODO we can also just copy/move the whole file -- no need to read through key-values
+				// fs.moveFromLocalFile(path, outPath);
+				// return;
 				
 				// write header
 				out.write(VERSION);

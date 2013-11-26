@@ -10,20 +10,35 @@ import org.brackit.xquery.QueryException;
 import org.brackit.xquery.XQuery;
 import org.brackit.xquery.compiler.CompileChain;
 import org.brackit.xquery.compiler.MRCompileChain;
+import org.brackit.xquery.util.Cfg;
 import org.brackit.xquery.xdm.DocumentException;
 import org.junit.Test;
 
 
 public class HadoopTest {
 
-	private final static boolean IS_LOCAL = true; 
+	/*
+	 * Paths to CSV files containing table data
+	 * 
+	 * IMPORTANT: Please use the config.properties file to configure the tests -- do not
+	 * edit the constants below!
+	 */
 	
-	private final static String HDFS = "hdfs://node6:9000/tpch/1GB/";
-	private final static String LINEITEM = IS_LOCAL
-				? HadoopTest.class.getResource("/csv/lineitem.csv").getPath()
-				: HDFS + "lineitem.tbl";
-	private final static String ORDERS = HadoopTest.class.getResource("/csv/orders.csv").getPath();
-	private final static String CUSTOMER = HadoopTest.class.getResource("/csv/customer.csv").getPath();
+	private static final String LOCAL_PATH = Cfg.asString("org.brackit.hadoop.testLocalPath",
+			HadoopTest.class.getResource("/csv/").getPath());
+
+	private final static boolean IS_LOCAL = Cfg.asBool("org.brackit.hadoop.testIsLocal", true); 
+	
+	private final static String HDFS = Cfg.asString("org.brackit.hadoop.testRemotePath",
+			"hdfs://node6:9000/tpch/1GB/");
+	
+	private final static String LINEITEM = 	(IS_LOCAL ? LOCAL_PATH : HDFS) + "lineitem.tbl";
+	private final static String ORDERS = 	(IS_LOCAL ? LOCAL_PATH : HDFS) + "orders.tbl";
+	private final static String CUSTOMER = 	(IS_LOCAL ? LOCAL_PATH : HDFS) + "customer.tbl";
+	
+	/*
+	 * Prolog of queries: import types and declare TPC-H collections
+	 */
 	
 	private final static String JSON_TYPES = HadoopTest.class.getResource("/json/tpch_types.json").getPath();
 	
@@ -148,9 +163,9 @@ public class HadoopTest {
 	{
 		run(PROLOG + 
 				"for $l in collection('lineitem') " +
-				"let $d := $l=>shipdate " +
-				"group by $d " +
-				"return { shipdate: $d, sum_price: sum($l=>extendedprice) }");
+				"let $m := substring($l=>shipdate, 1, 7) " +
+				"group by $m " +
+				"return { month: $m, sum_price: sum($l=>extendedprice) }");
 	}
 	
 	@Test
