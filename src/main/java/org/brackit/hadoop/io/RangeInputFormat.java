@@ -66,7 +66,7 @@ public class RangeInputFormat extends InputFormat {
 					ArrayList<InputSplit> result = new ArrayList<InputSplit>(mapTasks);
 					for (int i = 0; i < mapTasks; i++) {
 						long a = begin + i * length;
-						long b = Math.min(end, (i + 1) * length + begin - 1);
+						long b = i == mapTasks - 1 ? end : ((i + 1) * length + begin - 1);
 						result.add(new RangeInputSplit(a, b));
 						LOG.info(String.format("Task %d with range %d-%d", i, a, b));
 					}

@@ -279,7 +279,7 @@ public class HadoopTest {
 	@Test
 	public void rangeExpr() throws QueryException
 	{
-		runBrackit(
+		run(
 			"for $i in 1 to 1000000 " +
 			"let $x := bit:random(0,1) " +
 			"let $y := bit:random(0,1) " +
