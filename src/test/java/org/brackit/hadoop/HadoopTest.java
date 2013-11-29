@@ -279,7 +279,7 @@ public class HadoopTest {
 	@Test
 	public void rangeExpr() throws QueryException
 	{
-		run(
+		runBrackit(
 			"for $i in 1 to 1000000 " +
 			"let $x := bit:random(0,1) " +
 			"let $y := bit:random(0,1) " +
@@ -289,6 +289,21 @@ public class HadoopTest {
 			"group by $dummy " +
 			"return 4 * count($d) div 1000000"
 			);
+	}
+	
+	@Test
+	public void globalAggPi() throws QueryException
+	{
+		run(
+				"let $inCircle := count (" +
+				"	for $i in 1 to 1000000 " +
+				"	let $x := bit:random(0,1) " +
+				"	let $y := bit:random(0,1) " +
+				"	where math:sqrt($x*$x + $y*$y) < 1.0 " +
+				"	return $i" + // "return 1"  does not work with GlobalAggFinder 
+				") " +
+				"return 4 *  $inCircle div 1000000"
+				);
 	}
 	
 //	@Test

@@ -32,6 +32,8 @@ import java.rmi.server.UID;
 import java.security.MessageDigest;
 import java.util.Arrays;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -62,6 +64,8 @@ import org.brackit.xquery.xdm.atomic.Atomic;
 import org.brackit.xquery.xdm.atomic.Int32;
 
 public class XQTask {
+	
+	private static final Log LOG = LogFactory.getLog(XQTask.class);
 	
 	private static boolean RAW_ID_MAPPER = Cfg.asBool(XQueryJobConf.PROP_RAW_ID_MAPPER, false);
 
@@ -103,6 +107,7 @@ public class XQTask {
 					if (rangeExpr.getType() == XQ.RangeExpr) {
 						rangeExpr.getChild(0).setValue(new Long(begin));
 						rangeExpr.getChild(1).setValue(new Long(end));
+						LOG.info(String.format("Range expression of task adjusted to %d-%d", begin, end));
 					}
 				}
 

@@ -76,7 +76,7 @@ public class RangeInputSplit extends InputSplit implements Writable {
 	public void write(DataOutput out) throws IOException
 	{
 		out.writeLong(begin);
-		out.writeLong(begin);
+		out.writeLong(end);
 	}
 
 	@Override

@@ -216,7 +216,9 @@ public class ShuffleRewrite extends Walker {
 		}
 		
 		boolean hashGroupBy = Cfg.asBool(XQueryJobConf.PROP_HASH_GROUP_BY, false);
-		boolean addOrderBy = Cfg.asBool(XQueryJobConf.PROP_SKIP_HADOOP_SORT, false) && !hashGroupBy;
+		boolean addOrderBy = Cfg.asBool(XQueryJobConf.PROP_SKIP_HADOOP_SORT, false) 
+				&& !hashGroupBy
+				&& keyLen > 0; // global group-by (i.e. key-less) does not require sort
 		
 		if (addOrderBy && child != null && child.getChildCount() == keyLen + 1) {
 			int i = 0;
