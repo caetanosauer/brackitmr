@@ -81,33 +81,45 @@ public class XQTask {
 
 				AST ast = conf.getAst();
 				AST node = ast.getLastChild();
-				while (node.getType() != XQ.Start && node.getType() != XQExt.Shuffle) {
-					node = node.getLastChild();
-				}
-				if (node.getType() == XQExt.Shuffle) {
-					if (inputSplit instanceof BrackitInputSplit) {
-						int branch = ((BrackitInputSplit) inputSplit).getAstBranch();
+
+				if (inputSplit != null && inputSplit instanceof BrackitInputSplit) {
+					BrackitInputSplit bis = (BrackitInputSplit) inputSplit;
+					
+					/*
+					 *  Find begin of map task: either root of map-only query
+					 *  or root of one of the shuffle's branches (which branch?
+					 *  the one given by the BrackitInputSplit) 
+					 */
+					while (node.getType() != XQ.Start && node.getType() != XQExt.Shuffle) {
+						node = node.getLastChild();
+					}
+					if (node.getType() == XQExt.Shuffle) {
+						int branch = bis.getAstBranch();
 						node = node.getChild(branch);
 					}
-				}
-				else {
-					node = ast;
-				}
-
-				if (inputSplit != null && inputSplit instanceof RangeInputSplit) {
-					RangeInputSplit ris = (RangeInputSplit) inputSplit;
-					long begin = ris.getBegin();
-					long end = ris.getEnd();
-
-					AST forBind = node;
-					while (forBind.getType() != XQ.ForBind) {
-						forBind = forBind.getLastChild();
+					else {
+						node = ast;
 					}
-					AST rangeExpr = forBind.getChild(1);
-					if (rangeExpr.getType() == XQ.RangeExpr) {
-						rangeExpr.getChild(0).setValue(new Long(begin));
-						rangeExpr.getChild(1).setValue(new Long(end));
-						LOG.info(String.format("Range expression of task adjusted to %d-%d", begin, end));
+					
+					if (bis.getInputSplit() instanceof RangeInputSplit) {
+						RangeInputSplit ris = (RangeInputSplit) bis.getInputSplit();
+						long begin = ris.getBegin();
+						long end = ris.getEnd();
+
+						AST forBind = node;
+						while (forBind.getType() != XQ.ForBind) {
+							forBind = forBind.getLastChild();
+						}
+						AST rangeExpr = forBind.getChild(1);
+						if (rangeExpr.getType() == XQ.RangeExpr) {
+							// TODO: review typing of literals! How about range expr?
+							rangeExpr.getChild(0).setValue(new Int32((int) begin));
+							rangeExpr.getChild(1).setValue(new Int32((int) end));
+							LOG.info(String.format("Range expression of task adjusted to %d-%d", begin, end));
+						}
+						else {
+							throw new IOException("Could not find range expression in query using RangeInputFormat");
+						}
 					}
 				}
 
