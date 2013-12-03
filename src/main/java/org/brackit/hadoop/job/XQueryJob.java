@@ -36,6 +36,7 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.brackit.hadoop.io.BrackitInputFormat;
+import org.brackit.hadoop.runtime.DummyComparator;
 import org.brackit.hadoop.runtime.XQGroupingKey;
 import org.brackit.hadoop.runtime.XQJoinKeyComparator;
 import org.brackit.hadoop.runtime.XQJoinKeyPartitioner;
@@ -74,13 +75,13 @@ public class XQueryJob extends Job {
 			 *  TODO: this does not work because mergers also use the comparator class
 			 *  (not sure about grouping comparator though)
 			 */
-//			setGroupingComparatorClass(isJoin ? XQJoinKeyComparator.class : 
-//				skipSort ? DummyComparator.class : XQRawKeyComparator.class);
-//			setSortComparatorClass(isJoin ? XQJoinKeyComparator.class : 
-//				skipSort ? DummyComparator.class : XQRawKeyComparator.class);
+			setGroupingComparatorClass(isJoin ? XQJoinKeyComparator.class : 
+				skipSort ? DummyComparator.class : XQRawKeyComparator.class);
+			setSortComparatorClass(isJoin ? XQJoinKeyComparator.class : 
+				skipSort ? DummyComparator.class : XQRawKeyComparator.class);
 			
-			setSortComparatorClass(isJoin ? XQJoinKeyComparator.class : XQRawKeyComparator.class);
-			setGroupingComparatorClass(isJoin ? XQJoinKeyComparator.class : XQRawKeyComparator.class);
+//			setSortComparatorClass(isJoin ? XQJoinKeyComparator.class : XQRawKeyComparator.class);
+//			setGroupingComparatorClass(isJoin ? XQJoinKeyComparator.class : XQRawKeyComparator.class);
 			if (isJoin) setPartitionerClass(XQJoinKeyPartitioner.class);
 		}
 		else {
