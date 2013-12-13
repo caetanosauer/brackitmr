@@ -29,9 +29,9 @@ package org.brackit.hadoop.runtime;
 
 import org.brackit.xquery.ErrorCode;
 import org.brackit.xquery.QueryException;
-import org.brackit.xquery.Tuple;
 import org.brackit.xquery.xdm.Iter;
 import org.brackit.xquery.xdm.Sequence;
+import org.brackit.xquery.xdm.Tuple;
 import org.brackit.xquery.xdm.atomic.Atomic;
 import org.brackit.xquery.xdm.atomic.Int32;
 

@@ -6,7 +6,7 @@ import org.brackit.hadoop.runtime.XQGroupingKey;
 import org.brackit.xquery.ErrorCode;
 import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
-import org.brackit.xquery.Tuple;
+import org.brackit.xquery.xdm.Tuple;
 
 public class PhaseIn implements Operator {
 

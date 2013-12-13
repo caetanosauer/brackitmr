@@ -45,7 +45,7 @@ import org.brackit.hadoop.runtime.XQTask;
 import org.brackit.xquery.compiler.AST;
 import org.brackit.xquery.compiler.XQ;
 import org.brackit.xquery.compiler.XQExt;
-import org.brackit.xquery.operator.TupleImpl;
+import org.brackit.xquery.xdm.TupleImpl;
 
 public class XQueryJob extends Job {
 	

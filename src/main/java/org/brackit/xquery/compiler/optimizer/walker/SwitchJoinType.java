@@ -2,8 +2,8 @@ package org.brackit.xquery.compiler.optimizer.walker;
 
 import org.brackit.xquery.compiler.AST;
 import org.brackit.xquery.compiler.XQ;
-import org.brackit.xquery.module.Namespaces;
 import org.brackit.xquery.xdm.Collection;
+import org.brackit.xquery.xdm.NS;
 import org.brackit.xquery.xdm.atomic.QNm;
 
 public class SwitchJoinType extends Walker {
@@ -59,7 +59,7 @@ public class SwitchJoinType extends Walker {
 			}
 			
 			QNm fName = (QNm) input.getValue();
-			QNm collFunction = new QNm(Namespaces.FN_NSURI,	Namespaces.FN_PREFIX, "collection");
+			QNm collFunction = new QNm(NS.FN_NSURI,	NS.FN_PREFIX, "collection");
 			if (fName.atomicCmp(collFunction) != 0) {
 				return false;
 			}

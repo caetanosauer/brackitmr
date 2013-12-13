@@ -35,8 +35,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.brackit.hadoop.job.XQueryJobConf;
 import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
-import org.brackit.xquery.Tuple;
 import org.brackit.xquery.xdm.OperationNotSupportedException;
+import org.brackit.xquery.xdm.Tuple;
 import org.brackit.xquery.xdm.atomic.Atomic;
 import org.brackit.xquery.xdm.atomic.Int32;
 

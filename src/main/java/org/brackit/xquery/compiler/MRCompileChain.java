@@ -39,9 +39,9 @@ import org.brackit.xquery.compiler.analyzer.PrologAnalyzer;
 import org.brackit.xquery.compiler.optimizer.MROptimizer;
 import org.brackit.xquery.compiler.optimizer.Optimizer;
 import org.brackit.xquery.compiler.translator.MRTranslator;
+import org.brackit.xquery.expr.Expr;
 import org.brackit.xquery.module.StaticContext;
 import org.brackit.xquery.util.dot.DotUtil;
-import org.brackit.xquery.xdm.Expr;
 import org.brackit.xquery.xdm.atomic.QNm;
 import org.brackit.xquery.xdm.atomic.Str;
 

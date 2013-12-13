@@ -28,7 +28,7 @@
 package org.brackit.hadoop.runtime;
 
 import org.apache.hadoop.mapreduce.Partitioner;
-import org.brackit.xquery.Tuple;
+import org.brackit.xquery.xdm.Tuple;
 
 public class XQJoinKeyPartitioner extends Partitioner<XQGroupingKey, Tuple> {
 

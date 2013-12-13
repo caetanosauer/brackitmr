@@ -35,21 +35,21 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.brackit.hadoop.job.XQueryJob;
 import org.brackit.hadoop.job.XQueryJobConf;
+import org.brackit.hadoop.runtime.HadoopQueryContext;
 import org.brackit.xquery.ErrorCode;
 import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
-import org.brackit.xquery.Tuple;
 import org.brackit.xquery.XQuery;
 import org.brackit.xquery.compiler.AST;
 import org.brackit.xquery.compiler.XQ;
 import org.brackit.xquery.compiler.XQExt;
 import org.brackit.xquery.module.StaticContext;
 import org.brackit.xquery.util.Cfg;
-import org.brackit.xquery.util.ExprUtil;
+import org.brackit.xquery.util.SequenceUtil;
 import org.brackit.xquery.util.dot.DotUtil;
-import org.brackit.xquery.xdm.Expr;
 import org.brackit.xquery.xdm.Item;
 import org.brackit.xquery.xdm.Sequence;
+import org.brackit.xquery.xdm.Tuple;
 import org.brackit.xquery.xdm.atomic.Bool;
 
 public final class HadoopExpr implements Expr {
@@ -69,13 +69,21 @@ public final class HadoopExpr implements Expr {
 	
 	public Sequence evaluate(QueryContext ctx, Tuple tuple) throws QueryException
 	{
+		if (!(ctx instanceof HadoopQueryContext)) {
+			throw new QueryException(ErrorCode.BIT_DYN_ABORTED_ERROR,
+					"Execution of HadoopExpr requires a Hadoop query context");
+		}
+		
+		HadoopQueryContext hctx = (HadoopQueryContext) ctx;
+		ShuffleTree sTree = ShuffleTree.build(ast, null);		
 		try {
-			ShuffleTree sTree = ShuffleTree.build(ast, null);
 			if (sTree != null) {
-				trimJob(sTree, null, 0, ctx, tuple);
+				hctx.getClientContext().init(sTree.size());
+				trimJob(sTree, null, 0, hctx, tuple);
 			}
 			else {
-				run(ast, 0, ctx, tuple);
+				hctx.getClientContext().init(1);
+				run(ast, 0, hctx, tuple);
 			}
 			return new Bool(true);
 		}
@@ -119,14 +127,19 @@ public final class HadoopExpr implements Expr {
 	
 	private int run(AST root, int seq, QueryContext ctx, Tuple tuple) throws IOException, QueryException
 	{
+		HadoopQueryContext hctx = (HadoopQueryContext) ctx;
+		
 		XQueryJobConf jobConf = new XQueryJobConf(conf);
 		jobConf.setAst(root);
 		jobConf.setStaticContext(sctx);
 		jobConf.setSeqNumber(seq);
-		if (tuple != null) jobConf.setTuple(tuple);
+		if (tuple != null) {
+			jobConf.setTuple(tuple);
+		}
 		jobConf.parseInputsAndOutputs();
 		XQueryJob job = new XQueryJob(jobConf);
 		job.setJarByClass(HadoopExpr.class);
+
 		
 		if (XQuery.DEBUG) {
 			DotUtil.drawDotToFile(root.flworDot(), XQuery.DEBUG_DIR, "plan_job" + seq);
@@ -142,6 +155,8 @@ public final class HadoopExpr implements Expr {
 		
 		boolean status;
 		try {
+			job.submit();
+			hctx.getClientContext().attachJob(seq, job.getJobID());
 			status = job.waitForCompletion(true);
 			if (!status) {
 				throw new QueryException(ErrorCode.BIT_DYN_ABORTED_ERROR,
@@ -156,7 +171,7 @@ public final class HadoopExpr implements Expr {
 
 	public Item evaluateToItem(QueryContext ctx, Tuple tuple) throws QueryException
 	{
-		return ExprUtil.asItem(evaluate(ctx, tuple));
+		return SequenceUtil.asItem(evaluate(ctx, tuple));
 	}
 
 	public boolean isUpdating()
@@ -178,23 +193,33 @@ public final class HadoopExpr implements Expr {
 			this.shuffle = shuffle;
 		}
 		
-		static ShuffleTree build(AST node, ShuffleTree current)
+		static ShuffleTree build(AST node, ShuffleTree parent)
 		{
 			if (node == null) {
-				return current;
+				return parent;
 			}
 			if (node.getType() == XQExt.Shuffle) {
-				ShuffleTree s = new ShuffleTree(node, current);
-				if (current != null) {
-					current.children.add(s);
-				}
+				ShuffleTree s = new ShuffleTree(node, parent);
 				for (int i = 0; i < node.getChildCount(); i++) {
 					build(node.getChild(i), s);
 				}
+				if (parent != null) {
+					parent.children.add(s);
+				}
 				return s;
 			}
-			return build(node.getLastChild(), current);
+			return build(node.getLastChild(), parent);
 		}
+		
+		int size()
+		{
+			int size = 1;
+			for (ShuffleTree child : children) {
+				size += child.size();
+			}
+			return size;
+		}
+		
 	}
 
 }

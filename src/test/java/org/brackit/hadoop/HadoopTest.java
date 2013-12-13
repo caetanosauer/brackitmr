@@ -5,11 +5,11 @@ import java.io.File;
 import java.io.FileReader;
 
 import org.apache.hadoop.conf.Configuration;
-import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.XQuery;
 import org.brackit.xquery.compiler.CompileChain;
 import org.brackit.xquery.compiler.MRCompileChain;
+import org.brackit.xquery.expr.QueryContextImpl;
 import org.brackit.xquery.util.Cfg;
 import org.brackit.xquery.xdm.DocumentException;
 import org.junit.Test;
@@ -71,7 +71,7 @@ public class HadoopTest {
 		XQuery.DEBUG_DIR = XQuery.DEBUG_DIR + methodName + "/";
 		new File(XQuery.DEBUG_DIR).mkdirs();
 		XQuery xq = new XQuery(new MRCompileChain(CONF), query);
-		xq.evaluate(new QueryContext());
+		xq.evaluate(new QueryContextImpl());
 		XQuery.DEBUG_DIR = old;
 	}
 	
@@ -79,7 +79,7 @@ public class HadoopTest {
 	{
 		XQuery xq = new XQuery(new CompileChain(), query);
 		xq.setPrettyPrint(true);
-		xq.serialize(new QueryContext(), System.out);
+		xq.serialize(new QueryContextImpl(), System.out);
 	}
 	
 	public void adHoc(String filename, boolean local) throws QueryException

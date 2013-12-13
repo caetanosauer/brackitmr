@@ -30,10 +30,30 @@ package org.brackit.hadoop.runtime;
 import org.apache.hadoop.mapreduce.MapContext;
 import org.apache.hadoop.mapreduce.ReduceContext;
 import org.apache.hadoop.mapreduce.TaskInputOutputContext;
-import org.brackit.xquery.QueryContext;
+import org.brackit.xquery.expr.QueryContextImpl;
 
-public class HadoopQueryContext extends QueryContext {
+/**
+ * This class connects the standard brackit execution (through the QueryContext
+ * interface) with information from Hadoop. It serves basically as the runtime
+ * bridge between Brackit and Hadoop. The most common use case is to fetch
+ * configuration parameters from a JobConf during execution of a query.
+ * 
+ * It is a sort of polymorphic class, in which it is used in exactly one of the
+ * following possible scenarios:
+ * 
+ *  1) At the client side
+ *  2) Inside a map task
+ *  3) Inside a reduce task
+ *  
+ *  The scenario is determined by which of the corresponding
+ *  objects is not null.
+ * 
+ * @author Caetano Sauer
+ * 
+ */
+public class HadoopQueryContext extends QueryContextImpl {
 
+	private ClientContext clientContext;
 	private MapContext<?,?,?,?> mapContext;
 	private ReduceContext<?,?,?,?> reduceContext;
 	
@@ -47,6 +67,11 @@ public class HadoopQueryContext extends QueryContext {
 		this.reduceContext = context;
 	}
 
+	public HadoopQueryContext()
+	{
+		this.clientContext = new ClientContext();
+	}
+
 	public MapContext<?,?,?,?> getMapContext()
 	{
 		return mapContext;
@@ -57,9 +82,15 @@ public class HadoopQueryContext extends QueryContext {
 		return reduceContext;
 	}
 	
+	public ClientContext getClientContext()
+	{
+		return clientContext;
+	}
+	
 	public TaskInputOutputContext<?,?,?,?> getOutputContext()
 	{
 		return reduceContext != null ? reduceContext : mapContext;
 	}
+
 	
 }

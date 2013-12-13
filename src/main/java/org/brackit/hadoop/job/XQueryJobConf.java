@@ -50,18 +50,18 @@ import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.brackit.hadoop.collection.HadoopCollection;
 import org.brackit.hadoop.io.RangeInputFormat;
 import org.brackit.hadoop.runtime.DummySort;
-import org.brackit.xquery.Tuple;
 import org.brackit.xquery.compiler.AST;
 import org.brackit.xquery.compiler.Targets;
 import org.brackit.xquery.compiler.XQ;
 import org.brackit.xquery.compiler.XQExt;
 import org.brackit.xquery.module.StaticContext;
-import org.brackit.xquery.operator.TupleImpl;
 import org.brackit.xquery.util.Cfg;
 import org.brackit.xquery.util.io.XDMInputStream;
 import org.brackit.xquery.util.io.XDMOutputStream;
 import org.brackit.xquery.xdm.Collection;
 import org.brackit.xquery.xdm.Sequence;
+import org.brackit.xquery.xdm.Tuple;
+import org.brackit.xquery.xdm.TupleImpl;
 
 public class XQueryJobConf extends JobConf {
 

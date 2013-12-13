@@ -36,7 +36,6 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.XQuery;
 import org.brackit.xquery.compiler.MRCompileChain;
 
@@ -55,7 +54,7 @@ public class XQueryDriver extends Configured implements Tool
 	public int run(String[] args) throws Exception
 	{
 		String[] otherArgs = new GenericOptionsParser(getConf(), args).getRemainingArgs();
-		if (otherArgs.length < 1) {
+		if (otherArgs.length != 1) {
 			System.err.println("Usage: XQueryDriver <xquery file>");
 			return 2;
 		}
@@ -79,7 +78,7 @@ public class XQueryDriver extends Configured implements Tool
 		}
 		
 		XQuery xq = new XQuery(new MRCompileChain(getConf()), query);
-		xq.evaluate(new QueryContext());
+		xq.evaluate(new HadoopQueryContext());
 		
 		return 0;
 	}

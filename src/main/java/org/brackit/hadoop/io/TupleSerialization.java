@@ -36,11 +36,11 @@ import org.apache.hadoop.io.serializer.Deserializer;
 import org.apache.hadoop.io.serializer.Serialization;
 import org.apache.hadoop.io.serializer.Serializer;
 import org.brackit.xquery.QueryException;
-import org.brackit.xquery.Tuple;
-import org.brackit.xquery.operator.TupleImpl;
 import org.brackit.xquery.util.io.XDMInputStream;
 import org.brackit.xquery.util.io.XDMOutputStream;
 import org.brackit.xquery.xdm.Sequence;
+import org.brackit.xquery.xdm.Tuple;
+import org.brackit.xquery.xdm.TupleImpl;
 import org.brackit.xquery.xdm.atomic.Int32;
 import org.brackit.xquery.xdm.type.SequenceType;
 

@@ -36,10 +36,10 @@ import org.apache.hadoop.io.SequenceFile.Reader;
 import org.brackit.hadoop.job.XQueryJobConf;
 import org.brackit.hadoop.runtime.XQGroupingKey;
 import org.brackit.xquery.QueryException;
-import org.brackit.xquery.operator.TupleImpl;
 import org.brackit.xquery.util.csv.CSVSerializer;
 import org.brackit.xquery.util.serialize.Serializer;
 import org.brackit.xquery.xdm.Sequence;
+import org.brackit.xquery.xdm.TupleImpl;
 
 public class SequenceFileInspector {
 

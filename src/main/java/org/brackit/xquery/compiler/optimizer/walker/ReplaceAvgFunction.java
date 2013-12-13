@@ -29,7 +29,7 @@ package org.brackit.xquery.compiler.optimizer.walker;
 
 import org.brackit.xquery.compiler.AST;
 import org.brackit.xquery.compiler.XQ;
-import org.brackit.xquery.module.Namespaces;
+import org.brackit.xquery.xdm.NS;
 import org.brackit.xquery.xdm.atomic.QNm;
 
 public class ReplaceAvgFunction extends Walker {
@@ -45,9 +45,9 @@ public class ReplaceAvgFunction extends Walker {
 
 	private AST functionCall(AST node)
 	{
-		QNm avg = new QNm(Namespaces.FN_NSURI, Namespaces.FN_PREFIX, "avg");
-		QNm sum = new QNm(Namespaces.FN_NSURI, Namespaces.FN_PREFIX, "sum");
-		QNm count = new QNm(Namespaces.FN_NSURI, Namespaces.FN_PREFIX, "count");
+		QNm avg = new QNm(NS.FN_NSURI, NS.FN_PREFIX, "avg");
+		QNm sum = new QNm(NS.FN_NSURI, NS.FN_PREFIX, "sum");
+		QNm count = new QNm(NS.FN_NSURI, NS.FN_PREFIX, "count");
 		if (avg.atomicCmp((QNm) node.getValue()) == 0) {
 			AST div = new AST(XQ.ArithmeticExpr);
 			div.addChild(new AST(XQ.DivideOp));
